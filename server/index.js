@@ -11,6 +11,7 @@ const conversationHandler = require('./conversationHandler');
 const agoraService = require('./agoraService');
 const fitScoring = require('./fitScoring');
 const skillMatrix = require('./skillMatrix');
+const profileAnalyzer = require('./profileAnalyzer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,10 +36,14 @@ app.post('/api/upload', upload.single('resume'), async (req, res) => {
     const filePath = req.file.path;
     const parsedData = await resumeParser.parseResume(filePath);
     
+    // Extract profile links from resume text
+    const profileLinks = profileAnalyzer.extractProfileLinks(parsedData.rawText || '');
+    
     const resume = {
       id: Date.now().toString(),
       filename: req.file.originalname,
       ...parsedData,
+      profileLinks,
       uploadedAt: new Date()
     };
     
@@ -267,12 +272,12 @@ app.get('/api/resumes', (req, res) => {
   });
 });
 
-// Rank candidates endpoint
-app.get('/api/rank-candidates', (req, res) => {
+// Rank candidates endpoint with profile activity analysis
+app.get('/api/rank-candidates', async (req, res) => {
   try {
     const { sortBy } = req.query;
     
-    let rankedCandidates = resumeDatabase.map(candidate => {
+    let rankedCandidates = await Promise.all(resumeDatabase.map(async (candidate) => {
       // Extract internship count from experience or work history
       const internships = (candidate.experience || []).filter(exp => 
         exp.toLowerCase().includes('intern')
@@ -280,8 +285,28 @@ app.get('/api/rank-candidates', (req, res) => {
       
       const yearsOfExperience = candidate.yearsOfExperience || 0;
       
-      // Calculate combined score (weighted)
-      const combinedScore = (yearsOfExperience * 10) + (internships * 5);
+      // Calculate base combined score (weighted)
+      let combinedScore = (yearsOfExperience * 10) + (internships * 5);
+      
+      // Analyze profile activity if links exist
+      let profileActivity = null;
+      let activityBoost = 0;
+      
+      if (candidate.profileLinks && Object.values(candidate.profileLinks).some(link => link)) {
+        try {
+          profileActivity = await profileAnalyzer.analyzeProfiles(
+            candidate.rawText || '', 
+            { requiresCoding: true }
+          );
+          
+          // Boost score based on activity
+          const boosted = profileAnalyzer.boostRankingWithActivity(combinedScore, profileActivity);
+          activityBoost = boosted.activityBoost;
+          combinedScore = boosted.finalScore;
+        } catch (error) {
+          console.error('Profile analysis error:', error.message);
+        }
+      }
       
       return {
         id: candidate.id,
@@ -289,10 +314,13 @@ app.get('/api/rank-candidates', (req, res) => {
         yearsOfExperience,
         internships,
         combinedScore,
+        activityBoost,
+        profileActivity,
+        profileLinks: candidate.profileLinks,
         skills: candidate.skills,
         education: candidate.education
       };
-    });
+    }));
     
     // Sort based on criteria
     if (sortBy === 'experience') {
@@ -301,6 +329,8 @@ app.get('/api/rank-candidates', (req, res) => {
       rankedCandidates.sort((a, b) => b.internships - a.internships);
     } else if (sortBy === 'combined') {
       rankedCandidates.sort((a, b) => b.combinedScore - a.combinedScore);
+    } else if (sortBy === 'activity') {
+      rankedCandidates.sort((a, b) => (b.activityBoost || 0) - (a.activityBoost || 0));
     }
     
     res.json({ 
@@ -308,6 +338,245 @@ app.get('/api/rank-candidates', (req, res) => {
       candidates: rankedCandidates 
     });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Integration settings storage
+const integrationSettings = {};
+
+// Save integration settings
+app.post('/api/integration/save', (req, res) => {
+  try {
+    const { companyName, careerPageUrl, webhookUrl, apiKey } = req.body;
+    
+    integrationSettings[apiKey] = {
+      companyName,
+      careerPageUrl,
+      webhookUrl,
+      createdAt: new Date()
+    };
+    
+    res.json({ success: true, message: 'Integration settings saved' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Public API: Submit application from career page
+app.post('/api/public/apply', async (req, res) => {
+  try {
+    const { apiKey, candidateData, resumeUrl } = req.body;
+    
+    if (!integrationSettings[apiKey]) {
+      return res.status(401).json({ success: false, error: 'Invalid API key' });
+    }
+    
+    // Download resume if URL provided
+    let parsedData = {};
+    if (resumeUrl) {
+      const response = await axios.get(resumeUrl, { responseType: 'arraybuffer' });
+      const tempPath = path.join('uploads', `${Date.now()}-public-resume.pdf`);
+      fs.writeFileSync(tempPath, response.data);
+      parsedData = await resumeParser.parseResume(tempPath);
+    }
+    
+    const resume = {
+      id: Date.now().toString(),
+      ...candidateData,
+      ...parsedData,
+      source: 'career_page',
+      company: integrationSettings[apiKey].companyName,
+      uploadedAt: new Date()
+    };
+    
+    resumeDatabase.push(resume);
+    
+    // Send webhook notification if configured
+    if (integrationSettings[apiKey].webhookUrl) {
+      try {
+        await axios.post(integrationSettings[apiKey].webhookUrl, {
+          event: 'new_application',
+          candidate: resume
+        });
+      } catch (webhookError) {
+        console.error('Webhook error:', webhookError.message);
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Application submitted successfully',
+      candidateId: resume.id
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Public API: Get job openings
+app.get('/api/public/jobs', (req, res) => {
+  try {
+    const { apiKey } = req.query;
+    
+    if (!integrationSettings[apiKey]) {
+      return res.status(401).json({ success: false, error: 'Invalid API key' });
+    }
+    
+    // Return current job description if available
+    res.json({ 
+      success: true, 
+      jobDescription: currentJobDescription,
+      company: integrationSettings[apiKey].companyName
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Public API: Chat endpoint for career page
+app.post('/api/public/chat', async (req, res) => {
+  try {
+    const { apiKey, message } = req.body;
+    
+    if (!integrationSettings[apiKey]) {
+      return res.status(401).json({ success: false, error: 'Invalid API key' });
+    }
+    
+    const response = await conversationHandler.handleQuery(message, resumeDatabase, currentJobDescription);
+    res.json({ success: true, response });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get stored job description
+app.get('/api/stored-jd', (req, res) => {
+  try {
+    res.json({ 
+      success: true, 
+      jobDescription: currentJobDescription 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Outreach: Search candidates
+app.post('/api/outreach/search', async (req, res) => {
+  try {
+    const { jobDescription, maxMonthsOld } = req.body;
+    
+    // Calculate cutoff date
+    const cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - maxMonthsOld);
+    
+    // Filter recent candidates
+    const recentCandidates = resumeDatabase.filter(candidate => {
+      const uploadDate = new Date(candidate.uploadedAt);
+      return uploadDate >= cutoffDate;
+    });
+    
+    if (recentCandidates.length === 0) {
+      return res.json({ success: true, matches: [], message: 'No recent candidates found' });
+    }
+    
+    // Evaluate candidates against JD
+    const evaluatedCandidates = await fitScoring.evaluateAllCandidates(jobDescription, recentCandidates);
+    
+    // Get top matches (score > 60%)
+    const matches = evaluatedCandidates
+      .filter(c => c.fitScore >= 60)
+      .slice(0, 20)
+      .map(candidate => {
+        const uploadDate = new Date(candidate.uploadedAt);
+        const daysAgo = Math.floor((Date.now() - uploadDate.getTime()) / (1000 * 60 * 60 * 24));
+        const uploadedAgo = daysAgo === 0 ? 'Today' : 
+                           daysAgo === 1 ? 'Yesterday' :
+                           daysAgo < 30 ? `${daysAgo} days ago` :
+                           `${Math.floor(daysAgo / 30)} months ago`;
+        
+        return {
+          id: candidate.id,
+          name: candidate.name,
+          email: candidate.email,
+          fitScore: candidate.fitScore,
+          matchReason: candidate.fitExplanation,
+          uploadedAgo
+        };
+      });
+    
+    // Generate email template
+    const jobTitle = jobDescription.split('\n')[0].substring(0, 50);
+    const emailTemplate = `Hi {{name}},
+
+I hope this email finds you well!
+
+We came across your profile and were impressed by your background. We have an exciting opportunity that aligns well with your experience and skills.
+
+**Job Description:**
+${jobDescription.substring(0, 500)}...
+
+We would love to know if you're available and interested in discussing this opportunity further. 
+
+Could you please let us know your availability for a brief call this week?
+
+Looking forward to hearing from you!
+
+Best regards,
+Recruitment Team`;
+    
+    res.json({ 
+      success: true, 
+      matches,
+      jobTitle,
+      emailTemplate
+    });
+  } catch (error) {
+    console.error('Outreach search error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Outreach: Send emails
+app.post('/api/outreach/send-emails', async (req, res) => {
+  try {
+    const { candidateIds, subject, template, jobDescription } = req.body;
+    
+    let sentCount = 0;
+    const failedEmails = [];
+    
+    for (const candidateId of candidateIds) {
+      const candidate = resumeDatabase.find(c => c.id === candidateId);
+      
+      if (!candidate || !candidate.email) {
+        failedEmails.push({ id: candidateId, reason: 'No email found' });
+        continue;
+      }
+      
+      // Replace template variables
+      const personalizedEmail = template.replace(/\{\{name\}\}/g, candidate.name);
+      
+      // In production, integrate with email service (SendGrid, AWS SES, etc.)
+      // For now, just log the email
+      console.log('Sending email to:', candidate.email);
+      console.log('Subject:', subject);
+      console.log('Body:', personalizedEmail);
+      
+      // Simulate email sending
+      // await sendEmail(candidate.email, subject, personalizedEmail);
+      
+      sentCount++;
+    }
+    
+    res.json({ 
+      success: true, 
+      sentCount,
+      failedEmails,
+      message: `Successfully sent ${sentCount} emails`
+    });
+  } catch (error) {
+    console.error('Send emails error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

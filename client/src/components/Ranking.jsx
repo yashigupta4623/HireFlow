@@ -37,6 +37,7 @@ function Ranking() {
           <option value="experience">Years of Experience</option>
           <option value="internships">Number of Internships</option>
           <option value="combined">Combined Score</option>
+          <option value="activity">Profile Activity</option>
         </select>
         <button onClick={fetchAndRankCandidates} className="refresh-btn">
           🔄 Refresh
@@ -63,10 +64,34 @@ function Ranking() {
                   </span>
                   {candidate.combinedScore && (
                     <span className="tag score-tag">
-                      ⭐ Score: {candidate.combinedScore}
+                      ⭐ Score: {candidate.combinedScore.toFixed(1)}
+                    </span>
+                  )}
+                  {candidate.activityBoost > 0 && (
+                    <span className="tag activity-tag">
+                      🔥 +{candidate.activityBoost.toFixed(1)} activity boost
                     </span>
                   )}
                 </div>
+                {candidate.profileLinks && Object.values(candidate.profileLinks).some(link => link) && (
+                  <div className="profile-links">
+                    {candidate.profileLinks.github && (
+                      <a href={candidate.profileLinks.github} target="_blank" rel="noopener noreferrer" className="profile-link">
+                        🐙 GitHub
+                      </a>
+                    )}
+                    {candidate.profileLinks.linkedin && (
+                      <a href={candidate.profileLinks.linkedin} target="_blank" rel="noopener noreferrer" className="profile-link">
+                        💼 LinkedIn
+                      </a>
+                    )}
+                    {candidate.profileLinks.leetcode && (
+                      <a href={candidate.profileLinks.leetcode} target="_blank" rel="noopener noreferrer" className="profile-link">
+                        💻 LeetCode
+                      </a>
+                    )}
+                  </div>
+                )}
                 {candidate.skills && candidate.skills.length > 0 && (
                   <div className="skills-preview">
                     <strong>Skills:</strong> {candidate.skills.slice(0, 5).join(', ')}

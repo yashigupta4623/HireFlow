@@ -5,6 +5,8 @@ import VoiceChat from './components/VoiceChat'
 import JobDescription from './components/JobDescription'
 import Analytics from './components/Analytics'
 import Ranking from './components/Ranking'
+import Integration from './components/Integration'
+import Outreach from './components/Outreach'
 import './App.css'
 
 function App() {
@@ -122,6 +124,18 @@ function App() {
         >
           📊 Analytics
         </button>
+        <button 
+          className={activeTab === 'outreach' ? 'active' : ''} 
+          onClick={() => setActiveTab('outreach')}
+        >
+          📧 Outreach
+        </button>
+        <button 
+          className={activeTab === 'integration' ? 'active' : ''} 
+          onClick={() => setActiveTab('integration')}
+        >
+          🔗 Integration
+        </button>
       </div>
 
       <div className="content">
@@ -142,6 +156,12 @@ function App() {
         )}
         {activeTab === 'analytics' && (
           <Analytics />
+        )}
+        {activeTab === 'outreach' && (
+          <Outreach />
+        )}
+        {activeTab === 'integration' && (
+          <Integration />
         )}
       </div>
 
