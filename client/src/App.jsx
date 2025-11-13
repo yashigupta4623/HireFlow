@@ -4,6 +4,7 @@ import ChatInterface from './components/ChatInterface'
 import VoiceChat from './components/VoiceChat'
 import JobDescription from './components/JobDescription'
 import Analytics from './components/Analytics'
+import Ranking from './components/Ranking'
 import './App.css'
 
 function App() {
@@ -98,6 +99,12 @@ function App() {
           🎯 JD Match
         </button>
         <button 
+          className={activeTab === 'ranking' ? 'active' : ''} 
+          onClick={() => setActiveTab('ranking')}
+        >
+          🏆 Ranking
+        </button>
+        <button 
           className={activeTab === 'chat' ? 'active' : ''} 
           onClick={() => setActiveTab('chat')}
         >
@@ -123,6 +130,9 @@ function App() {
         )}
         {activeTab === 'jd' && (
           <JobDescription onEvaluationComplete={() => {}} />
+        )}
+        {activeTab === 'ranking' && (
+          <Ranking />
         )}
         {activeTab === 'chat' && (
           <ChatInterface resumeCount={resumeCount} />

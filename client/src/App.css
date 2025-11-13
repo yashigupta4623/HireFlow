@@ -222,6 +222,36 @@ h2 + p {
   border-color: #10b981;
 }
 
+.upload-mode-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.upload-mode-tabs button {
+  flex: 1;
+  padding: 10px 20px;
+  border: 1px solid #2d3548;
+  background: #1a1f2e;
+  color: #94a3b8;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.upload-mode-tabs button:hover {
+  background: #252b3d;
+  color: #e2e8f0;
+}
+
+.upload-mode-tabs button.active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
 .upload-box input[type="file"] {
   margin-bottom: 20px;
   padding: 10px;
@@ -230,6 +260,28 @@ h2 + p {
   background: #252b3d;
   color: #e2e8f0;
   cursor: pointer;
+}
+
+.link-input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  border: 1px solid #2d3548;
+  border-radius: 5px;
+  background: #0f1419;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.link-input::placeholder {
+  color: #64748b;
+}
+
+.link-input:focus {
+  outline: none;
+  border-color: #10b981;
 }
 
 .file-name {
@@ -799,4 +851,120 @@ h2 + p {
   color: #64748b;
   font-size: 1.1rem;
   font-weight: 500;
+}
+
+.ranking-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.ranking-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 25px 0;
+  padding: 20px;
+  background: #0f1419;
+  border-radius: 6px;
+  border: 1px solid #2d3548;
+}
+
+.ranking-controls label {
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.ranking-select {
+  padding: 10px 15px;
+  background: #1a1f2e;
+  border: 1px solid #2d3548;
+  border-radius: 5px;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.ranking-select:focus {
+  outline: none;
+  border-color: #10b981;
+}
+
+.ranking-list {
+  margin-top: 25px;
+}
+
+.ranking-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #1a1f2e;
+  border: 1px solid #2d3548;
+  border-radius: 6px;
+  padding: 20px;
+  margin: 15px 0;
+  transition: border-color 0.2s;
+}
+
+.ranking-card:hover {
+  border-color: #10b981;
+}
+
+.rank-badge {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #10b981;
+  min-width: 60px;
+  text-align: center;
+}
+
+.candidate-info {
+  flex: 1;
+}
+
+.candidate-info h3 {
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.candidate-tags {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.tag {
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.experience-tag {
+  background: #1f3d2a;
+  color: #6ee7b7;
+}
+
+.internship-tag {
+  background: #1f2a3d;
+  color: #93c5fd;
+}
+
+.score-tag {
+  background: #3d2a1f;
+  color: #fbbf24;
+}
+
+.skills-preview {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+.skills-preview strong {
+  color: #e2e8f0;
 }
