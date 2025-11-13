@@ -1,8 +1,8 @@
-# HireFlow
-hireflow
-# AI Resume Screener with Agora Conversational AI
+# TalentVoice - AI Resume Screener with Agora Conversational AI
 
 An intelligent resume screening solution that allows recruiters to have natural conversations with uploaded resumes using AI. Built with Agora's Conversational AI for real-time voice interactions.
+
+> 🏆 **Hackathon Project** | 🎤 **Voice-First Recruitment** | 🤖 **AI-Powered Matching**
 
 ## Features
 
@@ -11,6 +11,8 @@ An intelligent resume screening solution that allows recruiters to have natural 
 - 💬 Text-based conversational interface
 - 🎤 Voice chat using Agora RTC
 - 🔍 Smart candidate search by skills, experience, education
+- 🎯 JD matching with AI fit scores (0-100%)
+- 📊 Analytics dashboard with insights
 - ⚡ Real-time responses
 
 ## Tech Stack
@@ -66,29 +68,33 @@ This will start:
 ## Usage
 
 ### Upload Resumes
-1. Go to "Upload Resumes" tab
+1. Go to "Upload" tab
 2. Select PDF, DOCX, or TXT files
 3. Click "Upload Resume"
 
+### JD Matching
+1. Go to "JD Match" tab
+2. Paste job description
+3. Click "Evaluate Candidates"
+4. See top matches with fit scores
+
 ### Text Chat
-1. Go to "Text Chat" tab
+1. Go to "Chat" tab
 2. Ask questions like:
    - "Who has Python and Machine Learning skills?"
    - "Find candidates with 5+ years of experience"
-   - "Show me candidates with React expertise"
+   - "Compare top 2 candidates"
 
 ### Voice Chat
-1. Go to "Voice Chat" tab
+1. Go to "Voice" tab
 2. Click "Start Voice Chat"
 3. Speak naturally to query candidates
 4. AI responds with relevant information
 
-## API Endpoints
-
-- `POST /api/upload` - Upload resume
-- `POST /api/chat` - Send chat message
-- `POST /api/agora/token` - Get Agora RTC token
-- `GET /api/resumes` - Get all resumes
+### Analytics
+1. Go to "Analytics" tab
+2. View top skills, average experience
+3. See talent pool insights
 
 ## Project Structure
 
@@ -97,13 +103,18 @@ This will start:
 │   ├── index.js              # Express server
 │   ├── resumeParser.js       # Resume parsing logic
 │   ├── conversationHandler.js # AI conversation logic
-│   └── agoraService.js       # Agora token generation
+│   ├── agoraService.js       # Agora token generation
+│   ├── fitScoring.js         # JD matching & scoring
+│   ├── skillMatrix.js        # Skill analysis
+│   └── comparison.js         # Candidate comparison
 ├── client/
 │   └── src/
 │       ├── components/
 │       │   ├── ResumeUpload.jsx
 │       │   ├── ChatInterface.jsx
-│       │   └── VoiceChat.jsx
+│       │   ├── VoiceChat.jsx
+│       │   ├── JobDescription.jsx
+│       │   └── Analytics.jsx
 │       ├── App.jsx
 │       └── main.jsx
 └── uploads/                  # Uploaded resumes
@@ -117,14 +128,10 @@ This will start:
 4. **Multi-Modal**: Both text and voice interaction options
 5. **Real-World Impact**: Dramatically reduces time-to-hire for recruiters
 
-## Future Enhancements
+## Documentation
 
-- Speech-to-text for voice queries
-- Multi-language support
-- Advanced filtering and ranking
-- Integration with ATS systems
-- Candidate comparison features
-- Video interview scheduling
+- **HACKATHON_DOCS.md** - Complete technical documentation
+- **PROJECT_SUMMARY.md** - Quick reference and demo guide
 
 ## License
 

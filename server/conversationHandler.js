@@ -7,7 +7,6 @@ const openai = new OpenAI({
 });
 
 async function handleQuery(query, resumeDatabase, jobDescription = null) {
-  // Create context from resume database
   const context = resumeDatabase.map((resume, idx) => 
     `Candidate ${idx + 1}: ${resume.name}
     Skills: ${resume.skills.join(', ')}

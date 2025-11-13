@@ -1,0 +1,40 @@
+{
+  "hash": "8698ace0",
+  "configHash": "d447a409",
+  "lockfileHash": "38eb254a",
+  "browserHash": "9d5a1831",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "4112f30f",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "846ca344",
+      "needsInterop": true
+    },
+    "agora-rtc-sdk-ng": {
+      "src": "../../node_modules/agora-rtc-sdk-ng/AgoraRTC_N-production.js",
+      "file": "agora-rtc-sdk-ng.js",
+      "fileHash": "17bf53cb",
+      "needsInterop": true
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "381e593a",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-3SOFIYQK": {
+      "file": "chunk-3SOFIYQK.js"
+    },
+    "chunk-HKJ2B2AA": {
+      "file": "chunk-HKJ2B2AA.js"
+    }
+  }
+}

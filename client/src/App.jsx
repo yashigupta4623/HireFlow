@@ -9,12 +9,79 @@ import './App.css'
 function App() {
   const [resumeCount, setResumeCount] = useState(0)
   const [activeTab, setActiveTab] = useState('upload')
+  const [isSignedIn, setIsSignedIn] = useState(false)
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleSignIn = (e) => {
+    e.preventDefault()
+    if (email.trim() && password.trim()) {
+      // Extract name from email (part before @)
+      const name = email.split('@')[0]
+      setUsername(name)
+      setIsSignedIn(true)
+    }
+  }
+
+  const handleSignOut = () => {
+    setIsSignedIn(false)
+    setUsername('')
+    setEmail('')
+    setPassword('')
+    setActiveTab('upload')
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="app">
+        <div className="signin-container">
+          <div className="signin-box">
+            <h1>TalentVoice</h1>
+            <p>AI-Powered Conversational Recruiter with Agora</p>
+            <form onSubmit={handleSignIn} className="signin-form">
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="signin-input"
+                required
+                autoFocus
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="signin-input"
+                required
+              />
+              <button type="submit" className="signin-btn">
+                Sign In
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="app">
       <header className="header">
-        <h1>🎯 AI Resume Screener</h1>
-        <p>Powered by Agora Conversational AI</p>
+        <div className="header-content">
+          <div>
+            <h1>TalentVoice</h1>
+            <p>AI-Powered Conversational Recruiter with Agora</p>
+          </div>
+          <div className="user-section">
+            <span className="username">👤 {username}</span>
+            <button onClick={handleSignOut} className="signout-btn">
+              Sign Out
+            </button>
+          </div>
+        </div>
       </header>
 
       <div className="tabs">
@@ -69,7 +136,7 @@ function App() {
       </div>
 
       <footer className="footer">
-        <p>Resumes in database: {resumeCount}</p>
+        <p>📊 {resumeCount} {resumeCount === 1 ? 'Resume' : 'Resumes'} in Database</p>
       </footer>
     </div>
   )

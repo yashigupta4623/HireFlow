@@ -28,7 +28,6 @@ function VoiceChat() {
     try {
       setStatus('Connecting...')
       
-      // Get token from backend
       const response = await axios.post('/api/agora/token', {
         channelName: 'resume-screening',
         uid: 0
@@ -36,10 +35,8 @@ function VoiceChat() {
 
       const { token, appId } = response.data
 
-      // Join channel
       await client.join(appId, 'resume-screening', token, null)
       
-      // Create and publish audio track
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
       await client.publish([audioTrack])
       

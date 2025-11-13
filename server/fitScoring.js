@@ -48,11 +48,9 @@ function calculateFitScoreLocally(jobDescription, candidate) {
   const jdLower = jobDescription.toLowerCase();
   const candidateSkills = candidate.skills.map(s => s.toLowerCase());
   
-  // Extract required skills from JD
   const commonSkills = ['javascript', 'python', 'java', 'react', 'node', 'aws', 'sql', 'docker'];
   const requiredSkills = commonSkills.filter(skill => jdLower.includes(skill));
   
-  // Calculate match
   const matchedSkills = requiredSkills.filter(skill => 
     candidateSkills.some(cs => cs.includes(skill))
   );

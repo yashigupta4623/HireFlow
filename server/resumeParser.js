@@ -22,7 +22,7 @@ async function parseResume(filePath) {
 }
 
 function extractResumeData(text) {
-  // Extract name (usually first line or after "Name:")
+  // Extract name
   const nameMatch = text.match(/(?:Name[:\s]+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
   const name = nameMatch ? nameMatch[1] : 'Unknown';
 

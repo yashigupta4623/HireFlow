@@ -1,7 +1,7 @@
 {
-  "name": "ai-resume-screener",
+  "name": "talenvoice",
   "version": "1.0.0",
-  "description": "AI-powered resume screening with conversational interface",
+  "description": "TalentVoice - AI-powered conversational recruiter with Agora integration",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon server/index.js",

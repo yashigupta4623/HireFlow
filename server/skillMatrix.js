@@ -1,5 +1,4 @@
 function generateSkillMatrix(candidates) {
-  // Extract all unique skills
   const allSkills = new Set();
   candidates.forEach(candidate => {
     candidate.skills.forEach(skill => allSkills.add(skill));
@@ -7,7 +6,6 @@ function generateSkillMatrix(candidates) {
   
   const skillsList = Array.from(allSkills).sort();
   
-  // Build matrix
   const matrix = candidates.map(candidate => {
     const row = {
       name: candidate.name,
@@ -62,7 +60,9 @@ function getSkillStatistics(candidates) {
     .sort((a, b) => b[1] - a[1])
     .map(([skill, count]) => ({ skill, count }));
   
-  const avgExperience = candidates.reduce((sum, c) => sum + c.yearsOfExperience, 0) / candidates.length;
+  const avgExperience = candidates.length > 0 
+    ? candidates.reduce((sum, c) => sum + c.yearsOfExperience, 0) / candidates.length 
+    : 0;
   
   return {
     topSkills: sortedSkills.slice(0, 10),

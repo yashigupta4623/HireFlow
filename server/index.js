@@ -129,7 +129,7 @@ app.get('/api/resumes', (req, res) => {
       name: r.name,
       filename: r.filename,
       skills: r.skills,
-      experience: r.experience,
+      yearsOfExperience: r.yearsOfExperience,
       education: r.education
     }))
   });
