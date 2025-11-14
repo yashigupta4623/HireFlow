@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Landing from './components/Landing'
 import ResumeUpload from './components/ResumeUpload'
 import ChatInterface from './components/ChatInterface'
 import VoiceChat from './components/VoiceChat'
 import JobDescription from './components/JobDescription'
+import axios from 'axios'
 import Analytics from './components/Analytics'
 import Ranking from './components/Ranking'
 import Integration from './components/Integration'
@@ -20,6 +21,16 @@ function App() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
+  useEffect(() => {
+      const savedUser = localStorage.getItem('user')
+    if (savedUser) {
+      const user = JSON.parse(savedUser)
+      setUsername(user.username)
+      setEmail(user.email)
+      setIsSignedIn(true)
+    }
+  }, [])
+
   const handleSignIn = (e) => {
     e.preventDefault()
     if (email.trim() && password.trim()) {
@@ -27,6 +38,10 @@ function App() {
       const name = email.split('@')[0]
       setUsername(name)
       setIsSignedIn(true)
+      localStorage.setItem(
+        'user',
+        JSON.stringify({ username: name, email })
+      )
     }
   }
 
