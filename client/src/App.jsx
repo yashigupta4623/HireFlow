@@ -113,7 +113,7 @@ function App() {
               </svg>
               <div className="logo-text">
                 <h1>TalentVoice</h1>
-                <span>AI Recruitment Platform</span>
+                <span>AI Recruitment Platform via Agora</span>
               </div>
             </div>
           </div>

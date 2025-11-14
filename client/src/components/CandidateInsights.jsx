@@ -33,7 +33,10 @@ function CandidateInsights() {
       })
       setInsights(response.data.insights)
     } catch (error) {
-      alert('Failed to analyze candidate: ' + error.message)
+      console.error('Analysis error:', error)
+      const errorMsg = error.response?.data?.error || error.message || 'Unknown error'
+      alert('Failed to analyze candidate: ' + errorMsg)
+      setInsights(null)
     } finally {
       setAnalyzing(false)
     }

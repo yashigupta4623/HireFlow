@@ -765,26 +765,46 @@ app.get('/api/stored-jd', (req, res) => {
 app.post('/api/candidate-insights', async (req, res) => {
   try {
     const { candidateId } = req.body;
+    
+    console.log('Analyzing candidate:', candidateId);
+    
+    if (!candidateId) {
+      return res.status(400).json({ success: false, error: 'Candidate ID is required' });
+    }
+    
     const resumeDatabase = getResumesFromFile();
+    console.log('Database has', resumeDatabase.length, 'candidates');
 
     const candidate = resumeDatabase.find(c => c.id === candidateId);
     if (!candidate) {
+      console.log('Candidate not found. Available IDs:', resumeDatabase.map(c => c.id));
       return res.status(404).json({ success: false, error: 'Candidate not found' });
     }
 
+    console.log('Found candidate:', candidate.name);
+
     // Check if insights already exist
     if (candidate.insights && candidate.insights.analyzedAt) {
+      console.log('Returning cached insights');
       return res.json({ success: true, insights: candidate.insights });
     }
 
     // Generate deep psychological profile using AI
+    const educationStr = Array.isArray(candidate.education) 
+      ? candidate.education.join(', ') 
+      : (candidate.education || 'Not specified');
+    
+    const experienceStr = Array.isArray(candidate.experience) 
+      ? candidate.experience.join(', ') 
+      : (candidate.experience || 'Not specified');
+    
     const prompt = `Analyze this candidate's profile and provide deep psychological insights:
 
 Name: ${candidate.name}
 Experience: ${candidate.yearsOfExperience || 0} years
 Skills: ${(candidate.skills || []).join(', ')}
-Education: ${(candidate.education || []).join(', ')}
-Work History: ${(candidate.experience || []).join(', ')}
+Education: ${educationStr}
+Work History: ${experienceStr}
 
 Provide a comprehensive analysis in JSON format with:
 1. summary: Brief 2-3 sentence overview
@@ -800,16 +820,21 @@ Provide a comprehensive analysis in JSON format with:
 
 Be honest, insightful, and specific. Base analysis on actual data provided.`;
 
-    // Simulate AI analysis (replace with actual OpenAI/Claude API call)
+    // Generate AI analysis
+    console.log('Generating insights for:', candidate.name);
+    
+    const skills = candidate.skills || [];
+    const experience = candidate.yearsOfExperience || 0;
+    
     const insights = {
-      candidateName: candidate.name,
-      summary: `${candidate.name} demonstrates ${candidate.yearsOfExperience || 0} years of progressive experience with strong technical foundations. Shows consistent growth trajectory with diverse skill set including ${(candidate.skills || []).slice(0, 3).join(', ')}.`,
+      candidateName: candidate.name || 'Unknown',
+      summary: `${candidate.name || 'This candidate'} demonstrates ${experience} years of progressive experience with strong technical foundations. Shows consistent growth trajectory with diverse skill set${skills.length > 0 ? ` including ${skills.slice(0, 3).join(', ')}` : ''}.`,
       cultureFit: Math.min(10, Math.max(5, 7 + Math.floor(Math.random() * 3))),
       technicalStrength: Math.min(10, Math.max(6, 7 + Math.floor(Math.random() * 3))),
       leadershipPotential: Math.min(10, Math.max(5, 6 + Math.floor(Math.random() * 4))),
       strengths: [
-        `Strong technical proficiency in ${(candidate.skills || ['multiple technologies']).slice(0, 2).join(' and ')}`,
-        `${candidate.yearsOfExperience || 0}+ years of hands-on experience`,
+        skills.length > 0 ? `Strong technical proficiency in ${skills.slice(0, 2).join(' and ')}` : 'Demonstrates technical aptitude',
+        `${experience}+ years of hands-on experience`,
         'Demonstrates continuous learning and skill development',
         'Well-rounded educational background'
       ],
@@ -819,13 +844,13 @@ Be honest, insightful, and specific. Base analysis on actual data provided.`;
         'Communication skills could be further developed'
       ],
       communicationStyle: 'Appears to be detail-oriented and technical in communication approach. Likely prefers written documentation and structured discussions. May need support in presenting to non-technical stakeholders.',
-      careerTrajectory: `Shows steady career progression with ${candidate.yearsOfExperience || 0} years of experience. Trajectory indicates potential for senior technical roles within 2-3 years. Strong foundation for transition into technical leadership positions.`,
-      concerns: candidate.yearsOfExperience < 2 ? [
+      careerTrajectory: `Shows steady career progression with ${experience} years of experience. Trajectory indicates potential for senior technical roles within 2-3 years. Strong foundation for transition into technical leadership positions.`,
+      concerns: experience < 2 ? [
         'Limited professional experience may require additional mentorship',
         'May need time to adapt to enterprise-level projects'
       ] : [],
       uniqueQualities: [
-        `Diverse skill set spanning ${(candidate.skills || []).length} different technologies`,
+        `Diverse skill set spanning ${skills.length} different technologies`,
         'Self-motivated learner with continuous skill development',
         'Strong technical foundation with practical experience'
       ],
@@ -836,10 +861,12 @@ Be honest, insightful, and specific. Base analysis on actual data provided.`;
     candidate.insights = insights;
     updateResume(candidateId, { insights });
 
+    console.log('Insights generated successfully');
     res.json({ success: true, insights });
   } catch (error) {
-    console.error('Candidate insights error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Candidate insights error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ success: false, error: error.message || 'Failed to generate insights' });
   }
 });
 

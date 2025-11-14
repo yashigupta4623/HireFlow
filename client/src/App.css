@@ -286,6 +286,31 @@
   margin: 0 auto;
 }
 
+.live-transcript {
+  background: var(--light-blue);
+  border: 2px solid var(--primary-blue);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  animation: pulse-border 1.5s infinite;
+}
+
+.live-transcript strong {
+  color: var(--primary-blue);
+  margin-right: 8px;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--primary-blue);
+  }
+  50% {
+    border-color: var(--accent-blue);
+  }
+}
+
 h2 {
   color: var(--text-primary);
   margin-bottom: 8px;
