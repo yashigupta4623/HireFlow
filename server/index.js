@@ -29,9 +29,67 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// In-memory storage for parsed resumes and job description
-const resumeDatabase = [];
+// Load resumes from JSON file
+// const fs = require('fs');
+// const path = require('path');
+
+const RESUMES_FILE_PATH = path.join(__dirname, '..', 'resumes.json');
 let currentJobDescription = null;
+
+// Helper function to read resumes from file
+function getResumesFromFile() {
+  try {
+    if (fs.existsSync(RESUMES_FILE_PATH)) {
+      const data = fs.readFileSync(RESUMES_FILE_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+    return [];
+  } catch (error) {
+    console.error('Error reading resumes.json:', error);
+    return [];
+  }
+}
+
+// Helper function to save resumes to file
+function saveResumesToFile(resumes) {
+  try {
+    fs.writeFileSync(RESUMES_FILE_PATH, JSON.stringify(resumes, null, 2));
+    console.log(`Saved ${resumes.length} resumes to resumes.json`);
+    return true;
+  } catch (error) {
+    console.error('Error saving resumes.json:', error);
+    return false;
+  }
+}
+
+// Helper function to add a resume
+function addResume(resume) {
+  const resumes = getResumesFromFile();
+  resumes.push(resume);
+  saveResumesToFile(resumes);
+  return resume;
+}
+
+// Helper function to update a resume
+function updateResume(resumeId, updates) {
+  const resumes = getResumesFromFile();
+  const index = resumes.findIndex(r => r.id === resumeId);
+  if (index !== -1) {
+    resumes[index] = { ...resumes[index], ...updates };
+    saveResumesToFile(resumes);
+    return resumes[index];
+  }
+  return null;
+}
+
+// Initialize file if it doesn't exist
+if (!fs.existsSync(RESUMES_FILE_PATH)) {
+  saveResumesToFile([]);
+  console.log('Created resumes.json file');
+} else {
+  const resumes = getResumesFromFile();
+  console.log(`Loaded ${resumes.length} resumes from resumes.json`);
+}
 
 // Upload resume endpoint
 app.post('/api/upload', upload.single('resume'), async (req, res) => {
@@ -50,22 +108,7 @@ app.post('/api/upload', upload.single('resume'), async (req, res) => {
       uploadedAt: new Date()
     };
 
-    let existingResumes = [];
-    try {
-      existingResumes = JSON.parse(fs.readFileSync('resumes.json', 'utf8'));
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        console.log('Resumes file not found. Creating a new file...');
-        fs.writeFileSync('resumes.json', JSON.stringify([]));
-        existingResumes = [];
-      } else {
-        throw error;
-      }
-    }
-
-    existingResumes.push(resume);
-
-    fs.writeFileSync('resumes.json', JSON.stringify(existingResumes, null, 2));
+    addResume(resume);
 
     res.json({
       success: true,
@@ -139,25 +182,8 @@ app.post('/api/upload-link', async (req, res) => {
       uploadedAt: new Date()
     };
 
-    let existingResumes = [];
-    try {
-      existingResumes = JSON.parse(fs.readFileSync('resumes.json', 'utf8'));
-    } catch (error) {
-      // If the JSON file doesn't exist, create an empty array
-      if (error.code === 'ENOENT') {
-        console.log('Resumes file not found. Creating a new file...');
-        fs.writeFileSync('resumes.json', JSON.stringify([]));
-        existingResumes = [];
-      } else {
-        throw error;
-      }
-    }
-
-    // Add the new resume to the existing resumes
-    existingResumes.push(resume);
-
-    // Write the updated resumes back to the JSON file
-    fs.writeFileSync('resumes.json', JSON.stringify(existingResumes, null, 2));
+    // Add the new resume
+    addResume(resume);
 
     console.log('Resume parsed successfully:', resume.name);
 
@@ -189,6 +215,7 @@ app.get('/api/resume-count', (req, res) => {
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
+    const resumeDatabase = getResumesFromFile();
     const response = await conversationHandler.handleQuery(message, resumeDatabase, currentJobDescription);
     res.json({ success: true, response });
   } catch (error) {
@@ -271,6 +298,7 @@ app.post('/api/job-description-link', async (req, res) => {
     currentJobDescription = jobDescription;
 
     // Evaluate all candidates against JD
+    const resumeDatabase = getResumesFromFile();
     const evaluatedCandidates = await fitScoring.evaluateAllCandidates(jobDescription, resumeDatabase);
 
     console.log('Job description fetched and candidates evaluated');
@@ -299,6 +327,7 @@ app.post('/api/job-description-link', async (req, res) => {
 // Skill matrix endpoint
 app.get('/api/skill-matrix', (req, res) => {
   try {
+    const resumeDatabase = getResumesFromFile();
     const matrix = skillMatrix.generateSkillMatrix(resumeDatabase);
     res.json({ success: true, ...matrix });
   } catch (error) {
@@ -309,6 +338,7 @@ app.get('/api/skill-matrix', (req, res) => {
 // Analytics endpoint
 app.get('/api/analytics', (req, res) => {
   try {
+    const resumeDatabase = getResumesFromFile();
     const stats = skillMatrix.getSkillStatistics(resumeDatabase);
     res.json({ success: true, ...stats });
   } catch (error) {
@@ -331,6 +361,7 @@ app.post('/api/agora/token', (req, res) => {
 app.post('/api/ai-interview/start', (req, res) => {
   try {
     const { candidateId } = req.body;
+    const resumeDatabase = getResumesFromFile();
 
     const candidate = resumeDatabase.find(c => c.id === candidateId);
     if (!candidate) {
@@ -413,12 +444,14 @@ app.post('/api/ai-interview/summary', async (req, res) => {
     const summary = await aiInterviewService.getInterviewSummary(candidateId);
 
     // Store summary with candidate
+    const resumeDatabase = getResumesFromFile();
     const candidate = resumeDatabase.find(c => c.id === candidateId);
     if (candidate) {
       if (!candidate.aiInterviews) {
         candidate.aiInterviews = [];
       }
       candidate.aiInterviews.push(summary);
+      updateResume(candidateId, { aiInterviews: candidate.aiInterviews });
     }
 
     res.json({
@@ -522,6 +555,7 @@ app.post('/api/stt/transcribe', upload.single('audio'), async (req, res) => {
 
 // Get all resumes
 app.get('/api/resumes', (req, res) => {
+  const resumeDatabase = getResumesFromFile();
   res.json({
     success: true,
     resumes: resumeDatabase.map(r => ({
@@ -539,6 +573,7 @@ app.get('/api/resumes', (req, res) => {
 app.get('/api/rank-candidates', async (req, res) => {
   try {
     const { sortBy } = req.query;
+    const resumeDatabase = getResumesFromFile();
 
     let rankedCandidates = await Promise.all(resumeDatabase.map(async (candidate) => {
       // Extract internship count from experience or work history
@@ -653,7 +688,7 @@ app.post('/api/public/apply', async (req, res) => {
       uploadedAt: new Date()
     };
 
-    resumeDatabase.push(resume);
+    addResume(resume);
 
     // Send webhook notification if configured
     if (integrationSettings[apiKey].webhookUrl) {
@@ -706,6 +741,7 @@ app.post('/api/public/chat', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid API key' });
     }
 
+    const resumeDatabase = getResumesFromFile();
     const response = await conversationHandler.handleQuery(message, resumeDatabase, currentJobDescription);
     res.json({ success: true, response });
   } catch (error) {
@@ -729,6 +765,7 @@ app.get('/api/stored-jd', (req, res) => {
 app.post('/api/candidate-insights', async (req, res) => {
   try {
     const { candidateId } = req.body;
+    const resumeDatabase = getResumesFromFile();
 
     const candidate = resumeDatabase.find(c => c.id === candidateId);
     if (!candidate) {
@@ -797,6 +834,7 @@ Be honest, insightful, and specific. Base analysis on actual data provided.`;
 
     // Store insights with candidate
     candidate.insights = insights;
+    updateResume(candidateId, { insights });
 
     res.json({ success: true, insights });
   } catch (error) {
@@ -815,6 +853,7 @@ app.post('/api/outreach/search', async (req, res) => {
     cutoffDate.setMonth(cutoffDate.getMonth() - maxMonthsOld);
 
     // Filter recent candidates
+    const resumeDatabase = getResumesFromFile();
     const recentCandidates = resumeDatabase.filter(candidate => {
       const uploadDate = new Date(candidate.uploadedAt);
       return uploadDate >= cutoffDate;
@@ -889,6 +928,7 @@ app.post('/api/outreach/send-emails', async (req, res) => {
     let sentCount = 0;
     const failedEmails = [];
 
+    const resumeDatabase = getResumesFromFile();
     for (const candidateId of candidateIds) {
       const candidate = resumeDatabase.find(c => c.id === candidateId);
 
@@ -928,6 +968,7 @@ app.post('/api/outreach/send-emails', async (req, res) => {
 app.post('/api/interview/generate-questions', async (req, res) => {
   try {
     const { candidateId } = req.body;
+    const resumeDatabase = getResumesFromFile();
 
     const candidate = resumeDatabase.find(c => c.id === candidateId);
     if (!candidate) {
@@ -998,6 +1039,7 @@ app.post('/api/interview/analyze-answer', async (req, res) => {
 app.post('/api/interview/save', async (req, res) => {
   try {
     const { candidateId, transcript, scores, duration } = req.body;
+    const resumeDatabase = getResumesFromFile();
 
     const candidate = resumeDatabase.find(c => c.id === candidateId);
     if (candidate) {
@@ -1012,6 +1054,8 @@ app.post('/api/interview/save', async (req, res) => {
         duration,
         averageScore: Object.values(scores).reduce((a, b) => a + b, 0) / Object.keys(scores).length
       });
+      
+      updateResume(candidateId, { interviews: candidate.interviews });
     }
 
     res.json({ success: true, message: 'Interview saved successfully' });
