@@ -21,38 +21,6 @@ function Landing({ onGetStarted }) {
         </div>
       </div>
 
-      <div className="features-grid">
-        <div className="feature-card">
-          <h3>Voice Interviews</h3>
-          <p>Conduct real-time AI-powered voice interviews using Agora technology</p>
-        </div>
-
-        <div className="feature-card">
-          <h3>Smart Parsing</h3>
-          <p>Automatically extract skills, experience, and education from resumes</p>
-        </div>
-
-        <div className="feature-card">
-          <h3>JD Matching</h3>
-          <p>Get AI-powered fit scores to match candidates with job descriptions</p>
-        </div>
-
-        <div className="feature-card">
-          <h3>Natural Chat</h3>
-          <p>Ask questions in plain English and get instant candidate insights</p>
-        </div>
-
-        <div className="feature-card">
-          <h3>Analytics</h3>
-          <p>Visualize your talent pool with real-time insights and metrics</p>
-        </div>
-
-        <div className="feature-card">
-          <h3>Fast & Easy</h3>
-          <p>Reduce time-to-hire from weeks to minutes with automation</p>
-        </div>
-      </div>
-
       <div className="how-it-works">
         <h2>How It Works</h2>
         <div className="steps">

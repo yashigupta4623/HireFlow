@@ -191,6 +191,16 @@
   width: 100%;
 }
 
+.signin-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.signin-logo svg {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+}
+
 .signin-box h1 {
   font-size: 2rem;
   font-weight: 400;

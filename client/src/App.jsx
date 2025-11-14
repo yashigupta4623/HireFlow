@@ -43,6 +43,14 @@ function App() {
       <div className="app">
         <div className="signin-container">
           <div className="signin-box">
+            <div className="signin-logo">
+              <svg width="60" height="60" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="36" height="36" rx="8" fill="#1a1a1a" stroke="#333333" strokeWidth="1"/>
+                <path d="M20 12 L20 28" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M14 18 L20 12 L26 18" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <circle cx="20" cy="25" r="2" fill="#ffffff"/>
+              </svg>
+            </div>
             <h1>TalentVoice</h1>
             <p>AI-Powered Conversational Recruiter with Agora</p>
             <form onSubmit={handleSignIn} className="signin-form">

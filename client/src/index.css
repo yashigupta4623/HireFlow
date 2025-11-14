@@ -48,14 +48,14 @@ body {
   background: #ffffff;
 }
 
-/* Topographic pattern overlay on right bottom */
+/* Topographic pattern overlay on right side - full height */
 body::before {
   content: '';
   position: fixed;
+  top: 0;
   right: 0;
-  bottom: 0;
   width: 50%;
-  height: 50%;
+  height: 100%;
   background-image: 
     /* Contour lines - more visible */
     repeating-radial-gradient(circle at 100% 100%, 
