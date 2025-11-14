@@ -279,7 +279,7 @@ app.post('/api/job-description', async (req, res) => {
     res.json({
       success: true,
       message: 'Job description saved and candidates evaluated',
-      topCandidates: evaluatedCandidates.slice(0, 5).map(c => ({
+      topCandidates: evaluatedCandidates.map(c => ({
         name: c.name,
         fitScore: c.fitScore,
         explanation: c.fitExplanation,
@@ -337,7 +337,7 @@ app.post('/api/job-description-link', async (req, res) => {
       success: true,
       message: 'Job description fetched and candidates evaluated',
       jobDescription: jobDescription,
-      topCandidates: evaluatedCandidates.slice(0, 5).map(c => ({
+      topCandidates: evaluatedCandidates.map(c => ({
         name: c.name,
         fitScore: c.fitScore,
         explanation: c.fitExplanation,

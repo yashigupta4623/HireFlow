@@ -19,6 +19,7 @@ function ResumeUpload({ onUploadSuccess }) {
   const [jdMessage, setJdMessage] = useState('')
 
   const [candidateNames, setCandidateNames] = useState([]);
+  const [topCandidates, setTopCandidates] = useState([]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0])
@@ -92,7 +93,11 @@ function ResumeUpload({ onUploadSuccess }) {
 
       setJdMessage(`✅ Job description saved! Found ${response.data.topCandidates?.length || 0} matching candidates.\n\n`)
 
-      const candidateNames = response.data.topCandidates?.map(candidate => candidate.name) || []
+      // Sort candidates by fitScore in descending order
+      const sortedCandidates = (response.data.topCandidates || []).sort((a, b) => b.fitScore - a.fitScore)
+      setTopCandidates(sortedCandidates)
+      
+      const candidateNames = sortedCandidates.map(candidate => candidate.name) || []
       setCandidateNames(candidateNames)
     } catch (error) {
       setJdMessage(`❌ Failed to save: ${error.message}`)
@@ -117,6 +122,10 @@ function ResumeUpload({ onUploadSuccess }) {
 
       setJd(response.data.jobDescription)
       setJdMessage(`✅ Job description fetched and saved! Found ${response.data.topCandidates?.length || 0} matching candidates.`)
+      
+      // Sort candidates by fitScore in descending order
+      const sortedCandidates = (response.data.topCandidates || []).sort((a, b) => b.fitScore - a.fitScore)
+      setTopCandidates(sortedCandidates)
     } catch (error) {
       setJdMessage(`❌ Failed to fetch: ${error.message}`)
     } finally {
@@ -266,14 +275,34 @@ function ResumeUpload({ onUploadSuccess }) {
           )}
 
           {jdMessage && <div className="message">{jdMessage}</div>}
-          <div className='candidateNames'>
-            <h3>Candidate Names:</h3>
-            <ul>
-              {candidateNames.map((name, index) => (
-                <li key={index}>{name}</li>
-              ))}
-            </ul>
-          </div>
+          
+          {topCandidates.length > 0 && (
+            <div className='matched-candidates'>
+              <h3>📊 Matched Candidates (Sorted by JD Match)</h3>
+              <div className="candidates-list">
+                {topCandidates.map((candidate, index) => {
+                  const score = candidate.fitScore || 0;
+                  // Determine color class based on new score ranges
+                  let colorClass = 'match-black';
+                  if (score >= 85) colorClass = 'match-dark-green';
+                  else if (score >= 71) colorClass = 'match-yellow';
+                  else if (score >= 60) colorClass = 'match-blue';
+                  else if (score >= 49) colorClass = 'match-orange';
+                  else if (score >= 40) colorClass = 'match-red';
+                  
+                  return (
+                    <div key={index} className="candidate-item">
+                      <span className="candidate-rank">#{index + 1}</span>
+                      <span className="candidate-name">{candidate.name}</span>
+                      <span className={`match-tag ${colorClass}`}>
+                        {score}% JD Match
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

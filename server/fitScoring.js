@@ -48,25 +48,59 @@ function calculateFitScoreLocally(jobDescription, candidate) {
   const jdLower = jobDescription.toLowerCase();
   const candidateSkills = candidate.skills.map(s => s.toLowerCase());
   
-  const commonSkills = ['javascript', 'python', 'java', 'react', 'node', 'aws', 'sql', 'docker'];
-  const requiredSkills = commonSkills.filter(skill => jdLower.includes(skill));
+  // Extract keywords from JD
+  const allSkills = [
+    'javascript', 'python', 'java', 'react', 'node', 'aws', 'sql', 'docker',
+    'kubernetes', 'typescript', 'angular', 'vue', 'mongodb', 'postgresql',
+    'redis', 'graphql', 'rest', 'api', 'microservices', 'devops', 'ci/cd',
+    'git', 'agile', 'scrum', 'machine learning', 'ai', 'data science',
+    'cloud', 'azure', 'gcp', 'linux', 'jenkins', 'terraform', 'ansible'
+  ];
   
+  const requiredSkills = allSkills.filter(skill => jdLower.includes(skill));
+  
+  // 1. Skill Match Score (40 points)
   const matchedSkills = requiredSkills.filter(skill => 
     candidateSkills.some(cs => cs.includes(skill))
   );
   
-  const skillScore = requiredSkills.length > 0 
-    ? (matchedSkills.length / requiredSkills.length) * 70 
-    : 50;
+  const skillMatchScore = requiredSkills.length > 0 
+    ? (matchedSkills.length / requiredSkills.length) * 40 
+    : 20;
   
-  const experienceScore = Math.min(candidate.yearsOfExperience * 5, 30);
-  const totalScore = Math.round(skillScore + experienceScore);
+  // 2. Experience Score (25 points)
+  const experienceScore = Math.min(candidate.yearsOfExperience * 4, 25);
+  
+  // 3. Total Skills Count (15 points) - More skills = better
+  const totalSkillsScore = Math.min((candidate.skills.length / 20) * 15, 15);
+  
+  // 4. Education Score (10 points)
+  const educationLower = (candidate.education || '').toLowerCase();
+  let educationScore = 5; // Base score
+  if (educationLower.includes('master') || educationLower.includes('phd')) {
+    educationScore = 10;
+  } else if (educationLower.includes('bachelor') || educationLower.includes('b.tech') || educationLower.includes('b.e')) {
+    educationScore = 8;
+  }
+  
+  // 5. Keyword Density Score (10 points) - How many times skills appear
+  let keywordDensity = 0;
+  matchedSkills.forEach(skill => {
+    const count = candidateSkills.filter(cs => cs.includes(skill)).length;
+    keywordDensity += count;
+  });
+  const densityScore = Math.min((keywordDensity / matchedSkills.length) * 10, 10);
+  
+  // Calculate total with some randomization for differentiation (±2 points)
+  const baseScore = skillMatchScore + experienceScore + totalSkillsScore + educationScore + densityScore;
+  const randomAdjustment = (Math.random() * 4) - 2; // -2 to +2
+  const totalScore = Math.round(Math.max(0, Math.min(100, baseScore + randomAdjustment)));
   
   return {
     score: totalScore,
-    explanation: `Matched ${matchedSkills.length}/${requiredSkills.length} key skills. ${candidate.yearsOfExperience} years experience.`,
-    strengths: matchedSkills,
-    gaps: requiredSkills.filter(s => !matchedSkills.includes(s))
+    explanation: `Matched ${matchedSkills.length}/${requiredSkills.length} key skills with ${candidate.yearsOfExperience} years experience. ${candidate.skills.length} total skills identified.`,
+    strengths: matchedSkills.slice(0, 5),
+    gaps: requiredSkills.filter(s => !matchedSkills.includes(s)).slice(0, 3)
   };
 }
 
@@ -84,7 +118,16 @@ async function evaluateAllCandidates(jobDescription, candidates) {
     })
   );
   
-  return evaluations.sort((a, b) => b.fitScore - a.fitScore);
+  // Sort by fitScore (primary), then by experience (secondary), then by skills count (tertiary)
+  return evaluations.sort((a, b) => {
+    if (b.fitScore !== a.fitScore) {
+      return b.fitScore - a.fitScore;
+    }
+    if (b.yearsOfExperience !== a.yearsOfExperience) {
+      return b.yearsOfExperience - a.yearsOfExperience;
+    }
+    return b.skills.length - a.skills.length;
+  });
 }
 
 module.exports = { calculateFitScore, evaluateAllCandidates };

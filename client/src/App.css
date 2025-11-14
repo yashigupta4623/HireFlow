@@ -2555,3 +2555,125 @@ h2 + p {
   display: block;
   margin-bottom: 4px;
 }
+
+
+/* Matched Candidates Styling */
+.matched-candidates {
+  margin-top: 30px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.matched-candidates h3 {
+  margin-bottom: 20px;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+}
+
+.candidates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.candidate-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 20px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.candidate-item:hover {
+  transform: translateX(5px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+}
+
+.candidate-rank {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary-color);
+  min-width: 35px;
+  text-align: center;
+}
+
+.candidate-name {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.match-tag {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Match percentage color coding - Updated Ranges */
+
+/* 85-100% - Excellent Match - Dark Green with border ⭐ */
+.match-tag.match-dark-green {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  color: white;
+  border: 2px solid #10b981;
+  font-weight: 700;
+}
+
+/* 71-84% - High Match - Yellow ✅ */
+.match-tag.match-yellow {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #1f2937;
+  font-weight: 600;
+}
+
+/* 60-70% - Medium Match - Blue 👍 */
+.match-tag.match-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+/* 49-59% - Fair Match - Orange ⚠️ */
+.match-tag.match-orange {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+}
+
+/* 40-48% - Low Match - Red */
+.match-tag.match-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+/* 0-39% - Very Low Match - Black ❌ */
+.match-tag.match-black {
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  color: white;
+  border: 1px solid #374151;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .candidate-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .candidate-rank {
+    min-width: auto;
+  }
+  
+  .match-tag {
+    align-self: flex-start;
+  }
+}
