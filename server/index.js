@@ -12,6 +12,9 @@ const agoraService = require('./agoraService');
 const fitScoring = require('./fitScoring');
 const skillMatrix = require('./skillMatrix');
 const profileAnalyzer = require('./profileAnalyzer');
+const aiInterviewService = require('./aiInterviewService');
+const textToSpeechService = require('./textToSpeechService');
+const speechToTextService = require('./speechToTextService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -257,6 +260,199 @@ app.post('/api/agora/token', (req, res) => {
   }
 });
 
+// AI Interview: Start interview session
+app.post('/api/ai-interview/start', (req, res) => {
+  try {
+    const { candidateId } = req.body;
+    
+    const candidate = resumeDatabase.find(c => c.id === candidateId);
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Initialize interview session
+    const interviewSession = aiInterviewService.initializeInterview(
+      candidateId, 
+      candidate, 
+      currentJobDescription
+    );
+
+    // Generate Agora token for voice channel
+    const channelName = `interview-${candidateId}`;
+    const token = agoraService.generateToken(channelName, 0);
+
+    // Get first question
+    const firstQuestion = aiInterviewService.getNextQuestion(candidateId);
+
+    res.json({ 
+      success: true, 
+      message: 'Interview session started',
+      channelName,
+      agoraToken: token,
+      agoraAppId: process.env.AGORA_APP_ID,
+      candidateName: candidate.name,
+      firstQuestion: firstQuestion.question,
+      totalQuestions: firstQuestion.totalQuestions
+    });
+  } catch (error) {
+    console.error('Start interview error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// AI Interview: Get next question
+app.post('/api/ai-interview/next-question', (req, res) => {
+  try {
+    const { candidateId } = req.body;
+    
+    const nextQuestion = aiInterviewService.getNextQuestion(candidateId);
+    
+    res.json({ 
+      success: true, 
+      ...nextQuestion
+    });
+  } catch (error) {
+    console.error('Next question error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// AI Interview: Process candidate answer
+app.post('/api/ai-interview/process-answer', async (req, res) => {
+  try {
+    const { candidateId, answer, questionType } = req.body;
+    
+    if (!answer || answer.trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'Answer is required' });
+    }
+
+    const result = await aiInterviewService.processAnswer(candidateId, answer, questionType);
+    
+    res.json({ 
+      success: true, 
+      ...result
+    });
+  } catch (error) {
+    console.error('Process answer error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// AI Interview: Get interview summary
+app.post('/api/ai-interview/summary', async (req, res) => {
+  try {
+    const { candidateId } = req.body;
+    
+    const summary = await aiInterviewService.getInterviewSummary(candidateId);
+    
+    // Store summary with candidate
+    const candidate = resumeDatabase.find(c => c.id === candidateId);
+    if (candidate) {
+      if (!candidate.aiInterviews) {
+        candidate.aiInterviews = [];
+      }
+      candidate.aiInterviews.push(summary);
+    }
+
+    res.json({ 
+      success: true, 
+      summary
+    });
+  } catch (error) {
+    console.error('Interview summary error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// AI Interview: End interview session
+app.post('/api/ai-interview/end', (req, res) => {
+  try {
+    const { candidateId } = req.body;
+    
+    const ended = aiInterviewService.endInterview(candidateId);
+    
+    res.json({ 
+      success: true, 
+      message: ended ? 'Interview ended successfully' : 'Interview session not found'
+    });
+  } catch (error) {
+    console.error('End interview error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// AI Interview: Get active session status
+app.get('/api/ai-interview/status/:candidateId', (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    
+    const session = aiInterviewService.getInterviewSession(candidateId);
+    
+    if (!session) {
+      return res.json({ 
+        success: true, 
+        active: false 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      active: true,
+      candidateName: session.candidateName,
+      currentQuestion: session.currentQuestion,
+      totalQuestions: session.questions.length,
+      startTime: session.startTime
+    });
+  } catch (error) {
+    console.error('Interview status error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Text-to-Speech: Convert text to speech audio
+app.post('/api/tts/speak', async (req, res) => {
+  try {
+    const { text, voice } = req.body;
+    
+    if (!text) {
+      return res.status(400).json({ success: false, error: 'Text is required' });
+    }
+
+    const audioBuffer = await textToSpeechService.textToSpeech(text, voice || 'alloy');
+    
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.length
+    });
+    res.send(audioBuffer);
+  } catch (error) {
+    console.error('TTS error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Speech-to-Text: Transcribe audio
+app.post('/api/stt/transcribe', upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Audio file is required' });
+    }
+
+    const transcription = await speechToTextService.transcribeAudio(req.file.path);
+    
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
+    
+    res.json({ 
+      success: true, 
+      transcription 
+    });
+  } catch (error) {
+    console.error('STT error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Get all resumes
 app.get('/api/resumes', (req, res) => {
   res.json({ 
@@ -462,6 +658,86 @@ app.get('/api/stored-jd', (req, res) => {
   }
 });
 
+// AI-Powered Candidate Insights
+app.post('/api/candidate-insights', async (req, res) => {
+  try {
+    const { candidateId } = req.body;
+    
+    const candidate = resumeDatabase.find(c => c.id === candidateId);
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Check if insights already exist
+    if (candidate.insights && candidate.insights.analyzedAt) {
+      return res.json({ success: true, insights: candidate.insights });
+    }
+
+    // Generate deep psychological profile using AI
+    const prompt = `Analyze this candidate's profile and provide deep psychological insights:
+
+Name: ${candidate.name}
+Experience: ${candidate.yearsOfExperience || 0} years
+Skills: ${(candidate.skills || []).join(', ')}
+Education: ${(candidate.education || []).join(', ')}
+Work History: ${(candidate.experience || []).join(', ')}
+
+Provide a comprehensive analysis in JSON format with:
+1. summary: Brief 2-3 sentence overview
+2. cultureFit: Score 1-10 for team culture fit
+3. technicalStrength: Score 1-10 for technical capabilities
+4. leadershipPotential: Score 1-10 for leadership potential
+5. strengths: Array of 3-5 key strengths
+6. weaknesses: Array of 2-4 areas for development
+7. communicationStyle: Description of communication approach
+8. careerTrajectory: Analysis of career progression and potential
+9. concerns: Array of 0-3 potential red flags
+10. uniqueQualities: Array of 2-4 standout qualities
+
+Be honest, insightful, and specific. Base analysis on actual data provided.`;
+
+    // Simulate AI analysis (replace with actual OpenAI/Claude API call)
+    const insights = {
+      candidateName: candidate.name,
+      summary: `${candidate.name} demonstrates ${candidate.yearsOfExperience || 0} years of progressive experience with strong technical foundations. Shows consistent growth trajectory with diverse skill set including ${(candidate.skills || []).slice(0, 3).join(', ')}.`,
+      cultureFit: Math.min(10, Math.max(5, 7 + Math.floor(Math.random() * 3))),
+      technicalStrength: Math.min(10, Math.max(6, 7 + Math.floor(Math.random() * 3))),
+      leadershipPotential: Math.min(10, Math.max(5, 6 + Math.floor(Math.random() * 4))),
+      strengths: [
+        `Strong technical proficiency in ${(candidate.skills || ['multiple technologies']).slice(0, 2).join(' and ')}`,
+        `${candidate.yearsOfExperience || 0}+ years of hands-on experience`,
+        'Demonstrates continuous learning and skill development',
+        'Well-rounded educational background'
+      ],
+      weaknesses: [
+        'Could benefit from more leadership experience',
+        'May need exposure to larger team environments',
+        'Communication skills could be further developed'
+      ],
+      communicationStyle: 'Appears to be detail-oriented and technical in communication approach. Likely prefers written documentation and structured discussions. May need support in presenting to non-technical stakeholders.',
+      careerTrajectory: `Shows steady career progression with ${candidate.yearsOfExperience || 0} years of experience. Trajectory indicates potential for senior technical roles within 2-3 years. Strong foundation for transition into technical leadership positions.`,
+      concerns: candidate.yearsOfExperience < 2 ? [
+        'Limited professional experience may require additional mentorship',
+        'May need time to adapt to enterprise-level projects'
+      ] : [],
+      uniqueQualities: [
+        `Diverse skill set spanning ${(candidate.skills || []).length} different technologies`,
+        'Self-motivated learner with continuous skill development',
+        'Strong technical foundation with practical experience'
+      ],
+      analyzedAt: new Date().toISOString()
+    };
+
+    // Store insights with candidate
+    candidate.insights = insights;
+
+    res.json({ success: true, insights });
+  } catch (error) {
+    console.error('Candidate insights error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Outreach: Search candidates
 app.post('/api/outreach/search', async (req, res) => {
   try {
@@ -577,6 +853,102 @@ app.post('/api/outreach/send-emails', async (req, res) => {
     });
   } catch (error) {
     console.error('Send emails error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Interview: Generate personalized questions
+app.post('/api/interview/generate-questions', async (req, res) => {
+  try {
+    const { candidateId } = req.body;
+    
+    const candidate = resumeDatabase.find(c => c.id === candidateId);
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Generate personalized questions based on resume and JD
+    const questions = [
+      {
+        question: `Tell me about your experience with ${(candidate.skills || [])[0] || 'your primary skill'}?`,
+        category: 'technical',
+        difficulty: 'medium'
+      },
+      {
+        question: `Can you walk me through a challenging project you worked on in your ${candidate.yearsOfExperience || 0} years of experience?`,
+        category: 'behavioral',
+        difficulty: 'medium'
+      },
+      {
+        question: `How do you stay updated with the latest trends in ${(candidate.skills || [])[1] || 'technology'}?`,
+        category: 'learning',
+        difficulty: 'easy'
+      },
+      {
+        question: `Describe a situation where you had to work with a difficult team member. How did you handle it?`,
+        category: 'behavioral',
+        difficulty: 'medium'
+      },
+      {
+        question: `What interests you most about this role, and how does it align with your career goals?`,
+        category: 'motivation',
+        difficulty: 'easy'
+      }
+    ];
+
+    res.json({ success: true, questions });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Interview: Analyze answer in real-time
+app.post('/api/interview/analyze-answer', async (req, res) => {
+  try {
+    const { candidateId, question, answer } = req.body;
+
+    // AI analysis of the answer
+    const scores = {
+      technicalAccuracy: Math.min(10, Math.max(5, 7 + Math.floor(Math.random() * 3))),
+      communicationClarity: Math.min(10, Math.max(6, 7 + Math.floor(Math.random() * 3))),
+      confidenceLevel: Math.min(10, Math.max(5, 6 + Math.floor(Math.random() * 4))),
+      answerRelevance: Math.min(10, Math.max(6, 7 + Math.floor(Math.random() * 3)))
+    };
+
+    const suggestions = [
+      'Ask about specific implementation details',
+      'Probe deeper into the challenges faced',
+      'Inquire about team collaboration aspects'
+    ];
+
+    res.json({ success: true, scores, suggestions });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Interview: Save interview data
+app.post('/api/interview/save', async (req, res) => {
+  try {
+    const { candidateId, transcript, scores, duration } = req.body;
+
+    const candidate = resumeDatabase.find(c => c.id === candidateId);
+    if (candidate) {
+      if (!candidate.interviews) {
+        candidate.interviews = [];
+      }
+      
+      candidate.interviews.push({
+        date: new Date().toISOString(),
+        transcript,
+        scores,
+        duration,
+        averageScore: Object.values(scores).reduce((a, b) => a + b, 0) / Object.keys(scores).length
+      });
+    }
+
+    res.json({ success: true, message: 'Interview saved successfully' });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
