@@ -19,7 +19,7 @@ const speechToTextService = require('./speechToTextService');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
 
 // File upload configuration
@@ -50,7 +50,22 @@ app.post('/api/upload', upload.single('resume'), async (req, res) => {
       uploadedAt: new Date()
     };
 
-    resumeDatabase.push(resume);
+    let existingResumes = [];
+    try {
+      existingResumes = JSON.parse(fs.readFileSync('resumes.json', 'utf8'));
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        console.log('Resumes file not found. Creating a new file...');
+        fs.writeFileSync('resumes.json', JSON.stringify([]));
+        existingResumes = [];
+      } else {
+        throw error;
+      }
+    }
+
+    existingResumes.push(resume);
+
+    fs.writeFileSync('resumes.json', JSON.stringify(existingResumes, null, 2));
 
     res.json({
       success: true,
@@ -124,7 +139,25 @@ app.post('/api/upload-link', async (req, res) => {
       uploadedAt: new Date()
     };
 
-    resumeDatabase.push(resume);
+    let existingResumes = [];
+    try {
+      existingResumes = JSON.parse(fs.readFileSync('resumes.json', 'utf8'));
+    } catch (error) {
+      // If the JSON file doesn't exist, create an empty array
+      if (error.code === 'ENOENT') {
+        console.log('Resumes file not found. Creating a new file...');
+        fs.writeFileSync('resumes.json', JSON.stringify([]));
+        existingResumes = [];
+      } else {
+        throw error;
+      }
+    }
+
+    // Add the new resume to the existing resumes
+    existingResumes.push(resume);
+
+    // Write the updated resumes back to the JSON file
+    fs.writeFileSync('resumes.json', JSON.stringify(existingResumes, null, 2));
 
     console.log('Resume parsed successfully:', resume.name);
 
@@ -140,6 +173,15 @@ app.post('/api/upload-link', async (req, res) => {
       success: false,
       error: `Failed to upload from link: ${error.message}`
     });
+  }
+});
+
+app.get('/api/resume-count', (req, res) => {
+  try {
+    const resumes = JSON.parse(fs.readFileSync('resumes.json', 'utf8'));
+    res.json({ count: Object.keys(resumes).length });
+  } catch (error) {
+    res.json({ count: 0 });
   }
 });
 
@@ -160,8 +202,22 @@ app.post('/api/job-description', async (req, res) => {
     const { jobDescription } = req.body;
     currentJobDescription = jobDescription;
 
+    let existingResumes = [];
+    try {
+      existingResumes = JSON.parse(fs.readFileSync('resumes.json', 'utf8'));
+    } catch (error) {
+      // If the JSON file doesn't exist, create an empty array
+      if (error.code === 'ENOENT') {
+        console.log('Resumes file not found. Creating a new file...');
+        fs.writeFileSync('resumes.json', JSON.stringify([]));
+        existingResumes = [];
+      } else {
+        throw error;
+      }
+    }
+
     // Evaluate all candidates against JD
-    const evaluatedCandidates = await fitScoring.evaluateAllCandidates(jobDescription, resumeDatabase);
+    const evaluatedCandidates = await fitScoring.evaluateAllCandidates(jobDescription, existingResumes);
 
     res.json({
       success: true,

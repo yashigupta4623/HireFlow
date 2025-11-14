@@ -3,7 +3,7 @@ import axios from 'axios'
 
 function ResumeUpload({ onUploadSuccess }) {
   const [section, setSection] = useState('resume') // 'resume' or 'jd'
-  
+
   // Resume states
   const [file, setFile] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -17,6 +17,8 @@ function ResumeUpload({ onUploadSuccess }) {
   const [jdLink, setJdLink] = useState('')
   const [jdLoading, setJdLoading] = useState(false)
   const [jdMessage, setJdMessage] = useState('')
+
+  const [candidateNames, setCandidateNames] = useState([]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0])
@@ -39,7 +41,7 @@ function ResumeUpload({ onUploadSuccess }) {
       const response = await axios.post('/api/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      
+
       setMessage(`✅ ${response.data.candidateName} uploaded successfully!`)
       setFile(null)
       onUploadSuccess()
@@ -63,7 +65,7 @@ function ResumeUpload({ onUploadSuccess }) {
       const response = await axios.post('/api/upload-link', {
         link: resumeLink
       })
-      
+
       setMessage(`✅ ${response.data.candidateName} uploaded successfully!`)
       setResumeLink('')
       onUploadSuccess()
@@ -84,11 +86,14 @@ function ResumeUpload({ onUploadSuccess }) {
     setJdMessage('')
 
     try {
-      const response = await axios.post('/api/job-description', { 
-        jobDescription: jd 
+      const response = await axios.post('/api/job-description', {
+        jobDescription: jd
       })
-      
-      setJdMessage(`✅ Job description saved! Found ${response.data.topCandidates?.length || 0} matching candidates.`)
+
+      setJdMessage(`✅ Job description saved! Found ${response.data.topCandidates?.length || 0} matching candidates.\n\n`)
+
+      const candidateNames = response.data.topCandidates?.map(candidate => candidate.name) || []
+      setCandidateNames(candidateNames)
     } catch (error) {
       setJdMessage(`❌ Failed to save: ${error.message}`)
     } finally {
@@ -106,10 +111,10 @@ function ResumeUpload({ onUploadSuccess }) {
     setJdMessage('')
 
     try {
-      const response = await axios.post('/api/job-description-link', { 
-        link: jdLink 
+      const response = await axios.post('/api/job-description-link', {
+        link: jdLink
       })
-      
+
       setJd(response.data.jobDescription)
       setJdMessage(`✅ Job description fetched and saved! Found ${response.data.topCandidates?.length || 0} matching candidates.`)
     } catch (error) {
@@ -123,15 +128,15 @@ function ResumeUpload({ onUploadSuccess }) {
     <div className="upload-container">
       <h2>📤 Upload Center</h2>
       <p>Upload resumes and job descriptions in one place</p>
-      
+
       <div className="section-tabs">
-        <button 
+        <button
           className={section === 'resume' ? 'active' : ''}
           onClick={() => setSection('resume')}
         >
           👤 Resumes
         </button>
-        <button 
+        <button
           className={section === 'jd' ? 'active' : ''}
           onClick={() => setSection('jd')}
         >
@@ -143,15 +148,15 @@ function ResumeUpload({ onUploadSuccess }) {
         <>
           <h3>Upload Candidate Resumes</h3>
           <p className="section-desc">Supported formats: PDF, DOCX, TXT</p>
-          
+
           <div className="upload-mode-tabs">
-            <button 
+            <button
               className={uploadMode === 'file' ? 'active' : ''}
               onClick={() => setUploadMode('file')}
             >
               📁 Upload File
             </button>
-            <button 
+            <button
               className={uploadMode === 'link' ? 'active' : ''}
               onClick={() => setUploadMode('link')}
             >
@@ -161,17 +166,17 @@ function ResumeUpload({ onUploadSuccess }) {
 
           {uploadMode === 'file' ? (
             <div className="upload-box">
-              <input 
-                type="file" 
+              <input
+                type="file"
                 accept=".pdf,.docx,.txt"
                 onChange={handleFileChange}
                 disabled={uploading}
               />
-              
+
               {file && <p className="file-name">Selected: {file.name}</p>}
-              
-              <button 
-                onClick={handleUpload} 
+
+              <button
+                onClick={handleUpload}
                 disabled={!file || uploading}
                 className="upload-btn"
               >
@@ -180,7 +185,7 @@ function ResumeUpload({ onUploadSuccess }) {
             </div>
           ) : (
             <div className="upload-box">
-              <input 
+              <input
                 type="url"
                 placeholder="Enter resume URL (e.g., Google Drive, Dropbox link)"
                 value={resumeLink}
@@ -188,9 +193,9 @@ function ResumeUpload({ onUploadSuccess }) {
                 disabled={uploading}
                 className="link-input"
               />
-              
-              <button 
-                onClick={handleLinkUpload} 
+
+              <button
+                onClick={handleLinkUpload}
                 disabled={!resumeLink.trim() || uploading}
                 className="upload-btn"
               >
@@ -207,13 +212,13 @@ function ResumeUpload({ onUploadSuccess }) {
           <p className="section-desc">Add JD to match candidates automatically</p>
 
           <div className="upload-mode-tabs">
-            <button 
+            <button
               className={jdInputMode === 'text' ? 'active' : ''}
               onClick={() => setJdInputMode('text')}
             >
               📝 Paste Text
             </button>
-            <button 
+            <button
               className={jdInputMode === 'link' ? 'active' : ''}
               onClick={() => setJdInputMode('link')}
             >
@@ -231,8 +236,8 @@ function ResumeUpload({ onUploadSuccess }) {
                 rows={10}
               />
 
-              <button 
-                onClick={handleJDSubmit} 
+              <button
+                onClick={handleJDSubmit}
                 disabled={!jd.trim() || jdLoading}
                 className="upload-btn"
               >
@@ -250,8 +255,8 @@ function ResumeUpload({ onUploadSuccess }) {
                 disabled={jdLoading}
               />
 
-              <button 
-                onClick={handleJDLinkSubmit} 
+              <button
+                onClick={handleJDLinkSubmit}
                 disabled={!jdLink.trim() || jdLoading}
                 className="upload-btn"
               >
@@ -261,6 +266,14 @@ function ResumeUpload({ onUploadSuccess }) {
           )}
 
           {jdMessage && <div className="message">{jdMessage}</div>}
+          <div className='candidateNames'>
+            <h3>Candidate Names:</h3>
+            <ul>
+              {candidateNames.map((name, index) => (
+                <li key={index}>{name}</li>
+              ))}
+            </ul>
+          </div>
         </>
       )}
     </div>

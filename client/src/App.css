@@ -481,6 +481,17 @@ h2 + p {
   color: var(--text-primary);
 }
 
+.candidateNames {
+  margin-top: 10px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 10px;
+  padding-left: 25px;
+  font-size: 14px;
+  color: #495057;
+}
+
 .warning {
   background: #2d2410;
   color: #fbbf24;

@@ -22,12 +22,15 @@ function App() {
   const [password, setPassword] = useState('')
 
   useEffect(() => {
-      const savedUser = localStorage.getItem('user')
+    const savedUser = localStorage.getItem('user')
     if (savedUser) {
       const user = JSON.parse(savedUser)
       setUsername(user.username)
       setEmail(user.email)
       setIsSignedIn(true)
+      axios.get('/api/resume-count').then(res => {
+        setResumeCount(res.data.count)
+      })
     }
   }, [])
 
@@ -60,10 +63,10 @@ function App() {
           <div className="signin-box">
             <div className="signin-logo">
               <svg width="60" height="60" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="2" width="36" height="36" rx="8" fill="#1a1a1a" stroke="#333333" strokeWidth="1"/>
-                <path d="M20 12 L20 28" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round"/>
-                <path d="M14 18 L20 12 L26 18" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <circle cx="20" cy="25" r="2" fill="#ffffff"/>
+                <rect x="2" y="2" width="36" height="36" rx="8" fill="#1a1a1a" stroke="#333333" strokeWidth="1" />
+                <path d="M20 12 L20 28" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M14 18 L20 12 L26 18" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                <circle cx="20" cy="25" r="2" fill="#ffffff" />
               </svg>
             </div>
             <h1>TalentVoice</h1>
@@ -103,10 +106,10 @@ function App() {
           <div className="logo-section">
             <div className="logo">
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="2" width="36" height="36" rx="8" fill="#1a1a1a" stroke="#333333" strokeWidth="1"/>
-                <path d="M20 12 L20 28" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round"/>
-                <path d="M14 18 L20 12 L26 18" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <circle cx="20" cy="25" r="2" fill="#ffffff"/>
+                <rect x="2" y="2" width="36" height="36" rx="8" fill="#1a1a1a" stroke="#333333" strokeWidth="1" />
+                <path d="M20 12 L20 28" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M14 18 L20 12 L26 18" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                <circle cx="20" cy="25" r="2" fill="#ffffff" />
               </svg>
               <div className="logo-text">
                 <h1>TalentVoice</h1>
@@ -114,12 +117,12 @@ function App() {
               </div>
             </div>
           </div>
-          
+
           <nav className="main-nav">
             <div className="nav-item">
               <span onClick={() => setActiveTab('landing')}>Home</span>
             </div>
-            
+
             <div className="nav-item">
               <span>Features</span>
               <div className="dropdown">
@@ -129,7 +132,7 @@ function App() {
                 <a onClick={() => setActiveTab('interview')}>Live Interview</a>
               </div>
             </div>
-            
+
             <div className="nav-item">
               <span>Communication</span>
               <div className="dropdown">
@@ -138,7 +141,7 @@ function App() {
                 <a onClick={() => setActiveTab('outreach')}>Email Outreach</a>
               </div>
             </div>
-            
+
             <div className="nav-item">
               <span>Analytics</span>
               <div className="dropdown">
@@ -195,10 +198,10 @@ function App() {
           <div className="footer-section">
             <div className="footer-logo">
               <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="2" width="36" height="36" rx="8" fill="#1a1a1a" stroke="#333333" strokeWidth="1"/>
-                <path d="M20 12 L20 28" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round"/>
-                <path d="M14 18 L20 12 L26 18" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <circle cx="20" cy="25" r="2" fill="#ffffff"/>
+                <rect x="2" y="2" width="36" height="36" rx="8" fill="#1a1a1a" stroke="#333333" strokeWidth="1" />
+                <path d="M20 12 L20 28" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M14 18 L20 12 L26 18" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                <circle cx="20" cy="25" r="2" fill="#ffffff" />
               </svg>
               <h3>TalentVoice</h3>
             </div>
@@ -235,7 +238,7 @@ function App() {
             </ul>
           </div>
         </div>
-        
+
         <div className="footer-bottom">
           <p>&copy; 2024 TalentVoice. All rights reserved.</p>
           <div className="footer-links">
