@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 
 function Outreach() {
@@ -12,17 +12,21 @@ function Outreach() {
   const [sendingEmails, setSendingEmails] = useState(false)
   const [loadingStoredJD, setLoadingStoredJD] = useState(false)
 
+  // Auto-load JD on component mount
+  useEffect(() => {
+    loadStoredJD()
+  }, [])
+
   const loadStoredJD = async () => {
     setLoadingStoredJD(true)
     try {
       const response = await axios.get('/api/stored-jd')
       if (response.data.jobDescription) {
         setJd(response.data.jobDescription)
-      } else {
-        alert('No job description found. Please upload one in the JD Match section first.')
       }
+      // Silently fail if no JD - user can paste manually
     } catch (error) {
-      alert('Failed to load stored JD: ' + error.message)
+      console.log('No stored JD found')
     } finally {
       setLoadingStoredJD(false)
     }
@@ -44,7 +48,7 @@ function Outreach() {
       setMatches(response.data.matches)
       
       // Auto-generate email template
-      setEmailSubject(`Exciting Opportunity: ${response.data.jobTitle || 'New Position'}`)
+      setEmailSubject(`Exciting Opportunity at XYZ Pvt. Limited: ${response.data.jobTitle || 'New Position'}`)
       setEmailTemplate(response.data.emailTemplate)
     } catch (error) {
       alert('Search failed: ' + error.message)

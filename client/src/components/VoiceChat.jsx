@@ -12,8 +12,6 @@ function VoiceChat() {
   const [messages, setMessages] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
   
-  const mediaRecorderRef = useRef(null)
-  const audioChunksRef = useRef([])
   const recognitionRef = useRef(null)
 
   useEffect(() => {
@@ -83,17 +81,38 @@ function VoiceChat() {
     setMessages(prev => [...prev, { role: 'user', content: query }])
 
     try {
-      const response = await axios.post('/api/chat', { query })
+      const response = await axios.post('/api/chat', { message: query })
       const aiResponse = response.data.response
+      const audioUrl = response.data.audioUrl
 
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }])
       
-      // Speak the response
-      if ('speechSynthesis' in window) {
+      // Play audio if available (Google TTS), otherwise use browser TTS
+      if (audioUrl) {
+        const audio = new Audio(audioUrl)
+        audio.play()
+      } else if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(aiResponse)
-        utterance.rate = 0.9
-        utterance.pitch = 1
+        
+        // Get available voices and select a natural one
+        const voices = window.speechSynthesis.getVoices()
+        
+        // Prefer female voices (more natural for assistant)
+        const preferredVoice = voices.find(voice => 
+          voice.name.includes('Samantha') || // Mac
+          voice.name.includes('Google US English Female') || // Chrome
+          voice.name.includes('Microsoft Zira') || // Windows
+          voice.name.includes('Female')
+        ) || voices.find(voice => voice.lang.startsWith('en')) || voices[0]
+        
+        if (preferredVoice) {
+          utterance.voice = preferredVoice
+        }
+        
+        utterance.rate = 0.95 // Slightly slower for clarity
+        utterance.pitch = 1.1 // Slightly higher for friendliness
         utterance.volume = 1
+        
         window.speechSynthesis.speak(utterance)
       }
     } catch (error) {

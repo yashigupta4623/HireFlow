@@ -37,10 +37,14 @@ function LiveInterview() {
 
   const fetchCandidates = async () => {
     try {
+      console.log('Fetching candidates...')
       const response = await axios.get('/api/resumes')
-      setCandidates(response.data.resumes)
+      console.log('Candidates response:', response.data)
+      console.log('Number of candidates:', response.data.resumes?.length)
+      setCandidates(response.data.resumes || [])
     } catch (error) {
       console.error('Failed to fetch candidates:', error)
+      setCandidates([])
     }
   }
 
@@ -191,12 +195,17 @@ function LiveInterview() {
         <div className="interview-setup">
           <div className="setup-section">
             <h3>Select Candidate</h3>
+            {candidates.length === 0 && (
+              <p style={{ color: '#888', fontSize: '14px', marginBottom: '10px' }}>
+                Loading candidates... ({candidates.length} found)
+              </p>
+            )}
             <select 
               value={selectedCandidate || ''} 
               onChange={(e) => setSelectedCandidate(e.target.value)}
               className="candidate-select"
             >
-              <option value="">Choose a candidate...</option>
+              <option value="">Choose a candidate... ({candidates.length} available)</option>
               {candidates.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

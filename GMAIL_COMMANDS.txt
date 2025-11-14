@@ -1,0 +1,55 @@
+# ============================================
+# GMAIL SETUP - COPY & PASTE COMMANDS
+# ============================================
+
+# Step 1: Get Gmail App Password
+# Open this URL in your browser:
+https://myaccount.google.com/apppasswords
+
+# Step 2: Add to .env file (replace with your values)
+echo "EMAIL_USER=your-email@gmail.com" >> .env
+echo "EMAIL_PASS=your-16-char-app-password" >> .env
+
+# Step 3: Test email configuration
+npm run test-email your-test-email@gmail.com
+
+# ============================================
+# ALTERNATIVE: SendGrid Setup
+# ============================================
+
+# Step 1: Sign up at SendGrid
+# https://sendgrid.com/
+
+# Step 2: Add to .env file
+echo "SENDGRID_API_KEY=SG.your-api-key" >> .env
+echo "EMAIL_USER=your-verified-sender@yourdomain.com" >> .env
+
+# Step 3: Test
+npm run test-email your-test-email@gmail.com
+
+# ============================================
+# Testing Commands
+# ============================================
+
+# Check email service status
+curl http://localhost:3001/api/email-status
+
+# Send test email via API
+curl -X POST http://localhost:3001/api/test-email \
+  -H "Content-Type: application/json" \
+  -d '{"to":"your-email@gmail.com","subject":"Test","body":"Testing!"}'
+
+# ============================================
+# Troubleshooting
+# ============================================
+
+# View server logs
+npm run server
+
+# Check if .env is loaded
+cat .env | grep EMAIL
+
+# Test with different email
+npm run test-email another-email@example.com
+
+# ============================================

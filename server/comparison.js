@@ -5,29 +5,19 @@ const openai = new OpenAI({
 });
 
 async function compareCandidates(candidate1, candidate2, role = '') {
-  const prompt = `Compare these two candidates${role ? ` for ${role} role` : ''}:
+  const prompt = `Compare these candidates briefly (max 80 words):
 
-Candidate 1: ${candidate1.name}
-Skills: ${candidate1.skills.join(', ')}
-Experience: ${candidate1.yearsOfExperience} years
-Education: ${candidate1.education}
+${candidate1.name}: ${candidate1.yearsOfExperience} years, Key skills: ${candidate1.skills.slice(0, 5).join(', ')}
+${candidate2.name}: ${candidate2.yearsOfExperience} years, Key skills: ${candidate2.skills.slice(0, 5).join(', ')}
 
-Candidate 2: ${candidate2.name}
-Skills: ${candidate2.skills.join(', ')}
-Experience: ${candidate2.yearsOfExperience} years
-Education: ${candidate2.education}
-
-Provide a concise comparison highlighting:
-1. Key differences in skills and experience
-2. Who might be better suited and why
-3. Unique strengths of each candidate`;
+Focus on: Experience difference, 2-3 key skill differences, who's stronger overall. Be concise and professional.`;
 
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.5,
-      max_tokens: 400
+      max_tokens: 120
     });
 
     return completion.choices[0].message.content;
@@ -38,34 +28,36 @@ Provide a concise comparison highlighting:
 }
 
 function compareLocally(candidate1, candidate2, role) {
-  const c1Skills = new Set(candidate1.skills.map(s => s.toLowerCase()));
-  const c2Skills = new Set(candidate2.skills.map(s => s.toLowerCase()));
+  const c1 = candidate1;
+  const c2 = candidate2;
   
-  const uniqueToC1 = candidate1.skills.filter(s => !c2Skills.has(s.toLowerCase()));
-  const uniqueToC2 = candidate2.skills.filter(s => !c1Skills.has(s.toLowerCase()));
-  const commonSkills = candidate1.skills.filter(s => c2Skills.has(s.toLowerCase()));
+  // Get top 3 unique skills for each
+  const c1Skills = new Set(c1.skills.map(s => s.toLowerCase()));
+  const c2Skills = new Set(c2.skills.map(s => s.toLowerCase()));
+  const uniqueC1 = c1.skills.filter(s => !c2Skills.has(s.toLowerCase())).slice(0, 3);
+  const uniqueC2 = c2.skills.filter(s => !c1Skills.has(s.toLowerCase())).slice(0, 3);
   
-  let comparison = `Comparison for ${role || 'the position'}:\n\n`;
-  comparison += `${candidate1.name} has ${candidate1.yearsOfExperience} years of experience, `;
-  comparison += `while ${candidate2.name} has ${candidate2.yearsOfExperience} years.\n\n`;
+  // Build concise comparison
+  let comparison = `${c1.name} (${c1.yearsOfExperience} years) vs ${c2.name} (${c2.yearsOfExperience} years). `;
   
-  if (uniqueToC1.length > 0) {
-    comparison += `${candidate1.name}'s unique skills: ${uniqueToC1.join(', ')}\n`;
+  // Experience comparison
+  const expDiff = c2.yearsOfExperience - c1.yearsOfExperience;
+  if (Math.abs(expDiff) >= 2) {
+    const moreExp = expDiff > 0 ? c2.name : c1.name;
+    comparison += `${moreExp} has ${Math.abs(expDiff)} more years experience. `;
   }
   
-  if (uniqueToC2.length > 0) {
-    comparison += `${candidate2.name}'s unique skills: ${uniqueToC2.join(', ')}\n`;
+  // Key skill differences
+  if (uniqueC1.length > 0) {
+    comparison += `${c1.name} brings ${uniqueC1.slice(0, 2).join(', ')}. `;
+  }
+  if (uniqueC2.length > 0) {
+    comparison += `${c2.name} has ${uniqueC2.slice(0, 2).join(', ')}. `;
   }
   
-  if (commonSkills.length > 0) {
-    comparison += `\nBoth share: ${commonSkills.join(', ')}\n`;
-  }
-  
-  const expDiff = Math.abs(candidate1.yearsOfExperience - candidate2.yearsOfExperience);
-  if (expDiff > 2) {
-    const moreExp = candidate1.yearsOfExperience > candidate2.yearsOfExperience ? candidate1.name : candidate2.name;
-    comparison += `\n${moreExp} has significantly more experience.`;
-  }
+  // Recommendation
+  const stronger = c2.yearsOfExperience > c1.yearsOfExperience ? c2.name : c1.name;
+  comparison += `${stronger} appears stronger overall.`;
   
   return comparison;
 }

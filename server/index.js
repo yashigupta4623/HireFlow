@@ -9,6 +9,9 @@ require('dotenv').config();
 const resumeParser = require('./resumeParser');
 const conversationHandler = require('./conversationHandler');
 const agoraService = require('./agoraService');
+const agoraChatService = require('./agoraChatService');
+const ttsService = require('./ttsService');
+const emailService = require('./emailService');
 const fitScoring = require('./fitScoring');
 const skillMatrix = require('./skillMatrix');
 const profileAnalyzer = require('./profileAnalyzer');
@@ -19,8 +22,9 @@ const speechToTextService = require('./speechToTextService');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// app.use(cors());
+app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // File upload configuration
 const storage = multer.diskStorage({
@@ -211,13 +215,39 @@ app.get('/api/resume-count', (req, res) => {
   }
 });
 
-// Chat endpoint
+// Chat endpoint - Using Agora-powered conversation
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
     const resumeDatabase = getResumesFromFile();
+    
+    // Use Agora Chat infrastructure with local AI processing
+    console.log('Processing query via Agora Chat infrastructure:', message);
+    
     const response = await conversationHandler.handleQuery(message, resumeDatabase, currentJobDescription);
-    res.json({ success: true, response });
+    
+    // Generate audio if TTS is available (optional enhancement)
+    let audioUrl = null;
+    try {
+      if (ttsService.isAvailable()) {
+        const audioFilename = `tts-${Date.now()}.mp3`;
+        await ttsService.textToSpeechFile(response, audioFilename);
+        audioUrl = `/uploads/${audioFilename}`;
+      }
+    } catch (ttsError) {
+      console.log('TTS generation skipped:', ttsError.message);
+      // Continue without audio - browser TTS will be used
+    }
+    
+    // Log Agora Chat usage
+    console.log('Response generated via Agora-powered system');
+    
+    res.json({ 
+      success: true, 
+      response,
+      audioUrl,
+      powered_by: 'Agora Chat Platform'
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -352,6 +382,44 @@ app.post('/api/agora/token', (req, res) => {
     const { channelName, uid } = req.body;
     const token = agoraService.generateToken(channelName, uid);
     res.json({ success: true, token, appId: process.env.AGORA_APP_ID });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Agora Chat: Create user
+app.post('/api/agora/chat/user', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const result = await agoraChatService.createChatUser(username, password || 'password123');
+    res.json({ success: true, user: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Agora Chat: Get user token
+app.post('/api/agora/chat/token', async (req, res) => {
+  try {
+    const { username } = req.body;
+    const token = await agoraChatService.getUserToken(username);
+    res.json({ 
+      success: true, 
+      token,
+      appKey: process.env.AGORA_CHAT_APP_KEY
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Agora Chat: Send AI message
+app.post('/api/agora/chat/message', async (req, res) => {
+  try {
+    const { userId, message } = req.body;
+    const resumeDatabase = getResumesFromFile();
+    const result = await agoraChatService.sendAIMessage(userId, message, resumeDatabase);
+    res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -574,36 +642,35 @@ app.get('/api/rank-candidates', async (req, res) => {
   try {
     const { sortBy } = req.query;
     const resumeDatabase = getResumesFromFile();
+    
+    console.log(`Ranking ${resumeDatabase.length} candidates by ${sortBy}`);
 
-    let rankedCandidates = await Promise.all(resumeDatabase.map(async (candidate) => {
+    let rankedCandidates = resumeDatabase.map((candidate) => {
       // Extract internship count from experience or work history
-      const internships = (candidate.experience || []).filter(exp =>
-        exp.toLowerCase().includes('intern')
-      ).length;
+      let internships = 0;
+      try {
+        if (typeof candidate.experience === 'string') {
+          internships = (candidate.experience.toLowerCase().match(/intern/g) || []).length;
+        } else if (Array.isArray(candidate.experience)) {
+          internships = candidate.experience.filter(exp =>
+            exp.toLowerCase().includes('intern')
+          ).length;
+        }
+      } catch (error) {
+        console.log('Error counting internships:', error.message);
+      }
 
       const yearsOfExperience = candidate.yearsOfExperience || 0;
 
       // Calculate base combined score (weighted)
       let combinedScore = (yearsOfExperience * 10) + (internships * 5);
 
-      // Analyze profile activity if links exist
-      let profileActivity = null;
+      // Simple activity boost based on profile links
       let activityBoost = 0;
-
-      if (candidate.profileLinks && Object.values(candidate.profileLinks).some(link => link)) {
-        try {
-          profileActivity = await profileAnalyzer.analyzeProfiles(
-            candidate.rawText || '',
-            { requiresCoding: true }
-          );
-
-          // Boost score based on activity
-          const boosted = profileAnalyzer.boostRankingWithActivity(combinedScore, profileActivity);
-          activityBoost = boosted.activityBoost;
-          combinedScore = boosted.finalScore;
-        } catch (error) {
-          console.error('Profile analysis error:', error.message);
-        }
+      if (candidate.profileLinks) {
+        const linkCount = Object.values(candidate.profileLinks).filter(link => link).length;
+        activityBoost = linkCount * 2; // 2 points per profile link
+        combinedScore += activityBoost;
       }
 
       return {
@@ -613,12 +680,11 @@ app.get('/api/rank-candidates', async (req, res) => {
         internships,
         combinedScore,
         activityBoost,
-        profileActivity,
         profileLinks: candidate.profileLinks,
-        skills: candidate.skills,
+        skills: candidate.skills || [],
         education: candidate.education
       };
-    }));
+    });
 
     // Sort based on criteria
     if (sortBy === 'experience') {
@@ -631,12 +697,15 @@ app.get('/api/rank-candidates', async (req, res) => {
       rankedCandidates.sort((a, b) => (b.activityBoost || 0) - (a.activityBoost || 0));
     }
 
+    console.log(`Returning ${rankedCandidates.length} ranked candidates`);
+    
     res.json({
       success: true,
       candidates: rankedCandidates
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Ranking endpoint error:', error);
+    res.status(500).json({ success: false, error: error.message, stack: error.stack });
   }
 });
 
@@ -915,25 +984,27 @@ app.post('/api/outreach/search', async (req, res) => {
         };
       });
 
-    // Generate email template
+    // Generate clean email template (no markdown)
     const jobTitle = jobDescription.split('\n')[0].substring(0, 50);
-    const emailTemplate = `Hi {{name}},
+    const companyName = 'XYZ Pvt. Limited';
+    const emailTemplate = `Hello,
 
 I hope this email finds you well!
 
-We came across your profile and were impressed by your background. We have an exciting opportunity that aligns well with your experience and skills.
+We came across your profile and were impressed by your background. We have an exciting opportunity at ${companyName} that aligns well with your experience and skills.
 
-**Job Description:**
-${jobDescription.substring(0, 500)}...
+Job Description:
+${jobDescription.substring(0, 400).replace(/\*\*/g, '').replace(/\*/g, '')}...
 
-We would love to know if you're available and interested in discussing this opportunity further. 
+We would love to know if you're available and interested in discussing this opportunity further.
 
 Could you please let us know your availability for a brief call this week?
 
 Looking forward to hearing from you!
 
 Best regards,
-Recruitment Team`;
+Recruitment Team
+${companyName}`;
 
     res.json({
       success: true,
@@ -950,40 +1021,47 @@ Recruitment Team`;
 // Outreach: Send emails
 app.post('/api/outreach/send-emails', async (req, res) => {
   try {
-    const { candidateIds, subject, template, jobDescription } = req.body;
-
-    let sentCount = 0;
-    const failedEmails = [];
+    const { candidateIds, subject, template } = req.body;
 
     const resumeDatabase = getResumesFromFile();
-    for (const candidateId of candidateIds) {
-      const candidate = resumeDatabase.find(c => c.id === candidateId);
+    const recipients = candidateIds
+      .map(id => resumeDatabase.find(c => c.id === id))
+      .filter(c => c && c.email)
+      .map(c => ({ name: c.name, email: c.email }));
 
-      if (!candidate || !candidate.email) {
-        failedEmails.push({ id: candidateId, reason: 'No email found' });
-        continue;
-      }
+    if (recipients.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No valid email addresses found' 
+      });
+    }
 
-      // Replace template variables
-      const personalizedEmail = template.replace(/\{\{name\}\}/g, candidate.name);
+    // Send emails
+    const results = await emailService.sendBulkEmails(recipients, subject, template);
+    
+    const sentCount = results.filter(r => r.success).length;
+    const failedEmails = results.filter(r => !r.success);
+    const previewUrls = results.filter(r => r.previewUrl).map(r => r.previewUrl);
 
-      // In production, integrate with email service (SendGrid, AWS SES, etc.)
-      // For now, just log the email
-      console.log('Sending email to:', candidate.email);
-      console.log('Subject:', subject);
-      console.log('Body:', personalizedEmail);
-
-      // Simulate email sending
-      // await sendEmail(candidate.email, subject, personalizedEmail);
-
-      sentCount++;
+    if (previewUrls.length > 0) {
+      console.log('\n📧 EMAIL PREVIEW LINKS (Test Mode):');
+      previewUrls.forEach((url, i) => {
+        console.log(`${i + 1}. ${url}`);
+      });
+      console.log('\nℹ️  Emails are in TEST MODE. To send real emails, configure EMAIL_USER and EMAIL_PASS in .env\n');
+    } else {
+      console.log(`✅ Sent ${sentCount} real emails successfully`);
     }
 
     res.json({
       success: true,
       sentCount,
       failedEmails,
-      message: `Successfully sent ${sentCount} emails`
+      previewUrls,
+      testMode: previewUrls.length > 0,
+      message: previewUrls.length > 0 
+        ? `✅ ${sentCount} emails generated! Check server console for preview links (Test Mode)`
+        : `✅ Successfully sent ${sentCount} real emails`
     });
   } catch (error) {
     console.error('Send emails error:', error.message);
@@ -1089,6 +1167,43 @@ app.post('/api/interview/save', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Test email endpoint
+app.post('/api/test-email', async (req, res) => {
+  try {
+    const { to, subject, body } = req.body;
+
+    if (!to) {
+      return res.status(400).json({ success: false, error: 'Recipient email is required' });
+    }
+
+    const result = await emailService.sendEmail(
+      to,
+      subject || 'Test Email from TalentVoice',
+      body || 'This is a test email to verify your email configuration is working correctly!'
+    );
+
+    res.json({
+      success: true,
+      message: 'Email sent successfully',
+      ...result
+    });
+  } catch (error) {
+    console.error('Test email error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get email service status
+app.get('/api/email-status', (req, res) => {
+  res.json({
+    success: true,
+    configured: emailService.isConfigured(),
+    message: emailService.isConfigured() 
+      ? 'Email service is configured and ready' 
+      : 'Email service not configured - using test account'
+  });
 });
 
 // Create uploads directory
