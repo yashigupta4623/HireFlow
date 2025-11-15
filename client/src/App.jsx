@@ -240,7 +240,7 @@ function App() {
         </div>
 
         <div className="footer-bottom">
-          <p>&copy; 2024 TalentVoice. All rights reserved.</p>
+          <p>&copy; 2025 TalentVoice. All rights reserved.</p>
           <div className="footer-links">
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>

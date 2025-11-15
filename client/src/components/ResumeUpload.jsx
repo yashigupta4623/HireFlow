@@ -20,6 +20,12 @@ function ResumeUpload({ onUploadSuccess }) {
 
   const [candidateNames, setCandidateNames] = useState([]);
   const [topCandidates, setTopCandidates] = useState([]);
+  
+  // Modal states
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showEmailConfirm, setShowEmailConfirm] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0])
@@ -91,14 +97,23 @@ function ResumeUpload({ onUploadSuccess }) {
         jobDescription: jd
       })
 
-      setJdMessage(`✅ Job description saved! Found ${response.data.topCandidates?.length || 0} matching candidates.\n\n`)
-
+      console.log('=== Received candidates from API ===');
+      console.log('Full response:', response.data);
+      
       // Sort candidates by fitScore in descending order
       const sortedCandidates = (response.data.topCandidates || []).sort((a, b) => b.fitScore - a.fitScore)
+      
+      // Log each candidate's email
+      sortedCandidates.forEach((c, idx) => {
+        console.log(`${idx + 1}. ${c.name}: email=${c.email || 'MISSING'}`);
+      });
+      
       setTopCandidates(sortedCandidates)
       
       const candidateNames = sortedCandidates.map(candidate => candidate.name) || []
       setCandidateNames(candidateNames)
+      
+      setJdMessage(`✅ Job description saved! Found ${response.data.topCandidates?.length || 0} matching candidates.\n\n`)
     } catch (error) {
       setJdMessage(`❌ Failed to save: ${error.message}`)
     } finally {
@@ -130,6 +145,49 @@ function ResumeUpload({ onUploadSuccess }) {
       setJdMessage(`❌ Failed to fetch: ${error.message}`)
     } finally {
       setJdLoading(false)
+    }
+  }
+
+  const openCandidateModal = (candidate) => {
+    console.log('Opening modal for candidate:', candidate);
+    console.log('Candidate email:', candidate.email);
+    console.log('Full candidate object:', JSON.stringify(candidate, null, 2));
+    setSelectedCandidate(candidate);
+    setShowModal(true);
+  }
+
+  const closeCandidateModal = () => {
+    setShowModal(false);
+    setSelectedCandidate(null);
+  }
+
+  const handleContactCandidate = () => {
+    setShowEmailConfirm(true);
+  }
+
+  const handleSendEmail = async () => {
+    if (!selectedCandidate.email) {
+      alert('No email address available for this candidate');
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const response = await axios.post('/api/send-candidate-email', {
+        candidateName: selectedCandidate.name,
+        candidateEmail: selectedCandidate.email,
+        jobDescription: jd,
+        fitScore: selectedCandidate.fitScore
+      });
+
+      if (response.data.success) {
+        alert('✅ Email sent successfully!');
+        setShowEmailConfirm(false);
+      }
+    } catch (error) {
+      alert('❌ Failed to send email: ' + error.message);
+    } finally {
+      setSendingEmail(false);
     }
   }
 
@@ -291,12 +349,17 @@ function ResumeUpload({ onUploadSuccess }) {
                   else if (score >= 40) colorClass = 'match-red';
                   
                   return (
-                    <div key={index} className="candidate-item">
+                    <div 
+                      key={index} 
+                      className="candidate-item clickable"
+                      onClick={() => openCandidateModal(candidate)}
+                    >
                       <span className="candidate-rank">#{index + 1}</span>
                       <span className="candidate-name">{candidate.name}</span>
                       <span className={`match-tag ${colorClass}`}>
                         {score}% JD Match
                       </span>
+                      <span className="view-details">👁️ View Details</span>
                     </div>
                   );
                 })}
@@ -304,6 +367,202 @@ function ResumeUpload({ onUploadSuccess }) {
             </div>
           )}
         </>
+      )}
+
+      {/* Candidate Details Modal */}
+      {showModal && selectedCandidate && (
+        <div className="modal-overlay" onClick={closeCandidateModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeCandidateModal}>✕</button>
+            
+            <div className="modal-header">
+              <h2>👤 {selectedCandidate.name}</h2>
+              <div className={`modal-score ${
+                selectedCandidate.fitScore >= 85 ? 'score-excellent' :
+                selectedCandidate.fitScore >= 71 ? 'score-good' :
+                selectedCandidate.fitScore >= 60 ? 'score-fair' :
+                selectedCandidate.fitScore >= 49 ? 'score-moderate' :
+                selectedCandidate.fitScore >= 40 ? 'score-low' : 'score-poor'
+              }`}>
+                {selectedCandidate.fitScore}% Match
+              </div>
+            </div>
+
+            <div className="modal-body">
+              {/* Basic Info */}
+              <div className="modal-section">
+                <h3>📋 Basic Information</h3>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <span className="info-label">Experience:</span>
+                    <span className="info-value">{selectedCandidate.yearsOfExperience || 0} years</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Education:</span>
+                    <span className="info-value">{selectedCandidate.education || 'Not specified'}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Total Skills:</span>
+                    <span className="info-value">{selectedCandidate.skills?.length || 0} skills</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              {(selectedCandidate.email || selectedCandidate.phone || selectedCandidate.location) && (
+                <div className="modal-section">
+                  <h3>📞 Contact Information</h3>
+                  <div className="info-grid">
+                    {selectedCandidate.email && (
+                      <div className="info-item">
+                        <span className="info-label">Email:</span>
+                        <span className="info-value">{selectedCandidate.email}</span>
+                      </div>
+                    )}
+                    {selectedCandidate.phone && (
+                      <div className="info-item">
+                        <span className="info-label">Phone:</span>
+                        <span className="info-value">{selectedCandidate.phone}</span>
+                      </div>
+                    )}
+                    {selectedCandidate.location && (
+                      <div className="info-item">
+                        <span className="info-label">Location:</span>
+                        <span className="info-value">{selectedCandidate.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Why Suitable */}
+              <div className="modal-section">
+                <h3>💡 Why {selectedCandidate.fitScore}% Suitable?</h3>
+                <p className="explanation-text">
+                  {selectedCandidate.fitExplanation || 'This candidate shows strong alignment with the job requirements.'}
+                </p>
+              </div>
+
+              {/* Strengths */}
+              {selectedCandidate.strengths && selectedCandidate.strengths.length > 0 && (
+                <div className="modal-section">
+                  <h3>✅ Key Strengths</h3>
+                  <div className="strengths-list">
+                    {selectedCandidate.strengths.map((strength, idx) => (
+                      <span key={idx} className="strength-tag">
+                        ✓ {strength}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Gaps */}
+              {selectedCandidate.gaps && selectedCandidate.gaps.length > 0 && (
+                <div className="modal-section">
+                  <h3>⚠️ Areas for Development</h3>
+                  <div className="gaps-list">
+                    {selectedCandidate.gaps.map((gap, idx) => (
+                      <span key={idx} className="gap-tag">
+                        • {gap}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Match Reasons - Bullet Points */}
+              <div className="modal-section">
+                <h3>🎯 Why {selectedCandidate.fitScore}% Match?</h3>
+                <ul className="match-reasons-list">
+                  {selectedCandidate.strengths && selectedCandidate.strengths.length > 0 ? (
+                    selectedCandidate.strengths.slice(0, 5).map((strength, idx) => (
+                      <li key={idx}>
+                        <strong>✓</strong> Proficient in <strong>{strength}</strong> which is required for this role
+                      </li>
+                    ))
+                  ) : (
+                    <li>Strong alignment with job requirements based on experience and skills</li>
+                  )}
+                  {selectedCandidate.yearsOfExperience > 0 && (
+                    <li>
+                      <strong>✓</strong> Has <strong>{selectedCandidate.yearsOfExperience} years</strong> of relevant experience
+                    </li>
+                  )}
+                  {selectedCandidate.education && (
+                    <li>
+                      <strong>✓</strong> Educational background: <strong>{selectedCandidate.education}</strong>
+                    </li>
+                  )}
+                  {selectedCandidate.gaps && selectedCandidate.gaps.length > 0 && (
+                    <li>
+                      <strong>⚠️</strong> Could benefit from development in: {selectedCandidate.gaps.slice(0, 2).join(', ')}
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              {/* Experience Summary */}
+              {selectedCandidate.experience && (
+                <div className="modal-section">
+                  <h3>📝 Experience Summary</h3>
+                  <p className="experience-text">
+                    {selectedCandidate.experience.substring(0, 500)}
+                    {selectedCandidate.experience.length > 500 ? '...' : ''}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={closeCandidateModal}>
+                Close
+              </button>
+              <button className="btn-primary" onClick={handleContactCandidate}>
+                📧 Contact Candidate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Confirmation Modal */}
+      {showEmailConfirm && selectedCandidate && (
+        <div className="modal-overlay" onClick={() => setShowEmailConfirm(false)}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>📧 Send Email to Candidate</h3>
+            <p>
+              Do you want to send an email to <strong>{selectedCandidate.name}</strong> with the job description?
+            </p>
+            
+            {!selectedCandidate.email && (
+              <div className="email-warning">
+                ⚠️ No email address found for this candidate. Please add their email to the resume or contact them through other means.
+              </div>
+            )}
+            
+            <div className="confirm-details">
+              <p><strong>To:</strong> {selectedCandidate.email || <span className="no-email-text">No email available</span>}</p>
+              <p><strong>Subject:</strong> Exciting Job Opportunity - {selectedCandidate.fitScore}% Match</p>
+            </div>
+            <div className="confirm-actions">
+              <button 
+                className="btn-secondary" 
+                onClick={() => setShowEmailConfirm(false)}
+                disabled={sendingEmail}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={handleSendEmail}
+                disabled={sendingEmail || !selectedCandidate.email}
+              >
+                {sendingEmail ? '⏳ Sending...' : '✅ Yes, Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

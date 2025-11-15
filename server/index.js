@@ -276,16 +276,31 @@ app.post('/api/job-description', async (req, res) => {
     // Evaluate all candidates against JD
     const evaluatedCandidates = await fitScoring.evaluateAllCandidates(jobDescription, existingResumes);
 
+    const topCandidates = evaluatedCandidates.map(c => ({
+      name: c.name,
+      fitScore: c.fitScore,
+      fitExplanation: c.fitExplanation,
+      strengths: c.strengths,
+      gaps: c.gaps,
+      skills: c.skills,
+      education: c.education,
+      yearsOfExperience: c.yearsOfExperience,
+      experience: c.experience,
+      email: c.email,
+      phone: c.phone,
+      location: c.location
+    }));
+
+    // Debug logging
+    console.log('Sending candidates to frontend:');
+    topCandidates.forEach(c => {
+      console.log(`  - ${c.name}: email=${c.email}, phone=${c.phone}`);
+    });
+
     res.json({
       success: true,
       message: 'Job description saved and candidates evaluated',
-      topCandidates: evaluatedCandidates.map(c => ({
-        name: c.name,
-        fitScore: c.fitScore,
-        explanation: c.fitExplanation,
-        strengths: c.strengths,
-        gaps: c.gaps
-      }))
+      topCandidates
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -333,17 +348,32 @@ app.post('/api/job-description-link', async (req, res) => {
 
     console.log('Job description fetched and candidates evaluated');
 
+    const topCandidates = evaluatedCandidates.map(c => ({
+      name: c.name,
+      fitScore: c.fitScore,
+      fitExplanation: c.fitExplanation,
+      strengths: c.strengths,
+      gaps: c.gaps,
+      skills: c.skills,
+      education: c.education,
+      yearsOfExperience: c.yearsOfExperience,
+      experience: c.experience,
+      email: c.email,
+      phone: c.phone,
+      location: c.location
+    }));
+
+    // Debug logging
+    console.log('Sending candidates to frontend (from link):');
+    topCandidates.forEach(c => {
+      console.log(`  - ${c.name}: email=${c.email}, phone=${c.phone}`);
+    });
+
     res.json({
       success: true,
       message: 'Job description fetched and candidates evaluated',
       jobDescription: jobDescription,
-      topCandidates: evaluatedCandidates.map(c => ({
-        name: c.name,
-        fitScore: c.fitScore,
-        explanation: c.fitExplanation,
-        strengths: c.strengths,
-        gaps: c.gaps
-      }))
+      topCandidates
     });
   } catch (error) {
     console.error('Job description link error:', error.message);
@@ -1165,6 +1195,52 @@ app.post('/api/interview/save', async (req, res) => {
 
     res.json({ success: true, message: 'Interview saved successfully' });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Send email to candidate with JD
+app.post('/api/send-candidate-email', async (req, res) => {
+  try {
+    const { candidateName, candidateEmail, jobDescription, fitScore } = req.body;
+
+    if (!candidateEmail) {
+      return res.status(400).json({ success: false, error: 'Candidate email is required' });
+    }
+
+    const subject = `Exciting Job Opportunity - ${fitScore}% Match`;
+    
+    const body = `
+Dear ${candidateName},
+
+We came across your profile and believe you would be an excellent fit for an exciting opportunity we're currently recruiting for.
+
+Based on our initial assessment, your profile shows a ${fitScore}% match with the role requirements!
+
+JOB DESCRIPTION:
+${jobDescription}
+
+We would love to discuss this opportunity with you further. If you're interested, please reply to this email and we'll schedule a time to connect.
+
+Looking forward to hearing from you!
+
+Best regards,
+TalentVoice Recruitment Team
+    `.trim();
+
+    const result = await emailService.sendEmail(
+      candidateEmail,
+      subject,
+      body
+    );
+
+    res.json({
+      success: true,
+      message: 'Email sent successfully to candidate',
+      ...result
+    });
+  } catch (error) {
+    console.error('Candidate email error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

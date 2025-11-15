@@ -105,16 +105,38 @@ function calculateFitScoreLocally(jobDescription, candidate) {
 }
 
 async function evaluateAllCandidates(jobDescription, candidates) {
+  console.log(`\n=== Evaluating ${candidates.length} candidates ===`);
+  
   const evaluations = await Promise.all(
     candidates.map(async (candidate) => {
+      // Log input candidate
+      console.log(`Input candidate ${candidate.name}: has email=${!!candidate.email} (${candidate.email})`);
+      
       const fitScore = await calculateFitScore(jobDescription, candidate);
-      return {
-        ...candidate,
+      const result = {
+        // Explicitly preserve all fields
+        id: candidate.id,
+        filename: candidate.filename,
+        sourceLink: candidate.sourceLink,
+        name: candidate.name,
+        email: candidate.email,
+        phone: candidate.phone,
+        location: candidate.location,
+        skills: candidate.skills,
+        education: candidate.education,
+        yearsOfExperience: candidate.yearsOfExperience,
+        experience: candidate.experience,
+        // Add scoring results
         fitScore: fitScore.score,
         fitExplanation: fitScore.explanation,
         strengths: fitScore.strengths,
         gaps: fitScore.gaps
       };
+      
+      // Debug logging
+      console.log(`Output result ${result.name}: has email=${!!result.email} (${result.email})`);
+      
+      return result;
     })
   );
   
