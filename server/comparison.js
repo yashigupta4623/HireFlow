@@ -31,6 +31,8 @@ function compareLocally(candidate1, candidate2, role) {
   const c1 = candidate1;
   const c2 = candidate2;
   
+  console.log(`Comparing: ${c1.name} (${c1.yearsOfExperience} years, ${c1.skills.length} skills) vs ${c2.name} (${c2.yearsOfExperience} years, ${c2.skills.length} skills)`);
+  
   // Get top 3 unique skills for each
   const c1Skills = new Set(c1.skills.map(s => s.toLowerCase()));
   const c2Skills = new Set(c2.skills.map(s => s.toLowerCase()));
@@ -38,26 +40,36 @@ function compareLocally(candidate1, candidate2, role) {
   const uniqueC2 = c2.skills.filter(s => !c1Skills.has(s.toLowerCase())).slice(0, 3);
   
   // Build concise comparison
-  let comparison = `${c1.name} (${c1.yearsOfExperience} years) vs ${c2.name} (${c2.yearsOfExperience} years). `;
+  let comparison = `Comparing ${c1.name} with ${c1.yearsOfExperience} years experience versus ${c2.name} with ${c2.yearsOfExperience} years experience. `;
   
   // Experience comparison
   const expDiff = c2.yearsOfExperience - c1.yearsOfExperience;
-  if (Math.abs(expDiff) >= 2) {
+  if (Math.abs(expDiff) >= 1) {
     const moreExp = expDiff > 0 ? c2.name : c1.name;
-    comparison += `${moreExp} has ${Math.abs(expDiff)} more years experience. `;
+    const lessExp = expDiff > 0 ? c1.name : c2.name;
+    comparison += `${moreExp} has ${Math.abs(expDiff)} more ${Math.abs(expDiff) === 1 ? 'year' : 'years'} of experience than ${lessExp}. `;
+  } else {
+    comparison += `Both have equal experience. `;
   }
   
-  // Key skill differences
-  if (uniqueC1.length > 0) {
-    comparison += `${c1.name} brings ${uniqueC1.slice(0, 2).join(', ')}. `;
-  }
-  if (uniqueC2.length > 0) {
-    comparison += `${c2.name} has ${uniqueC2.slice(0, 2).join(', ')}. `;
-  }
+  // Key skill highlights
+  const c1TopSkills = c1.skills.slice(0, 3).join(', ');
+  const c2TopSkills = c2.skills.slice(0, 3).join(', ');
   
-  // Recommendation
-  const stronger = c2.yearsOfExperience > c1.yearsOfExperience ? c2.name : c1.name;
-  comparison += `${stronger} appears stronger overall.`;
+  comparison += `${c1.name}'s top skills include ${c1TopSkills}. `;
+  comparison += `${c2.name}'s top skills include ${c2TopSkills}. `;
+  
+  // Recommendation based on experience and skills
+  if (Math.abs(expDiff) >= 2) {
+    const stronger = expDiff > 0 ? c2.name : c1.name;
+    comparison += `${stronger} appears stronger due to more experience.`;
+  } else if (c1.skills.length > c2.skills.length * 1.2) {
+    comparison += `${c1.name} has a broader skill set with ${c1.skills.length} skills.`;
+  } else if (c2.skills.length > c1.skills.length * 1.2) {
+    comparison += `${c2.name} has a broader skill set with ${c2.skills.length} skills.`;
+  } else {
+    comparison += `Both candidates are strong and comparable.`;
+  }
   
   return comparison;
 }

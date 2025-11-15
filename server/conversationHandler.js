@@ -6,6 +6,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// Store last query context
+let lastQueryContext = {
+  type: null,
+  candidates: []
+};
+
 async function handleQuery(query, resumeDatabase, jobDescription = null) {
   // First try local handling for better accuracy
   const localResult = await handleQueryLocally(query, resumeDatabase);
@@ -58,8 +64,17 @@ async function handleQueryLocally(query, resumeDatabase) {
     return `Hi! I have ${resumeDatabase.length} candidates ready. What would you like to know?`;
   }
   
-  // Yes/Affirmative responses - compare top candidates
+  // Yes/Affirmative responses - use context from last query
   if (lowerQuery.match(/^(yes|yeah|yep|sure|ok|okay|yesh|ya)/)) {
+    // If we have context from a previous skill search, compare those candidates
+    if (lastQueryContext.type === 'skill_search' && lastQueryContext.candidates.length >= 2) {
+      const c1 = lastQueryContext.candidates[0];
+      const c2 = lastQueryContext.candidates[1];
+      console.log(`Comparing from context: ${c1.name} vs ${c2.name}`);
+      return await compareCandidates(c1, c2);
+    }
+    
+    // Otherwise, compare top 2 by experience
     if (resumeDatabase.length >= 2) {
       const sorted = [...resumeDatabase].sort((a, b) => (b.yearsOfExperience || 0) - (a.yearsOfExperience || 0));
       const c1 = sorted[0];
@@ -97,6 +112,22 @@ async function handleQueryLocally(query, resumeDatabase) {
   
   // Compare candidates
   if (lowerQuery.includes('compare')) {
+    // Check for "all" pattern - compare all candidates
+    if (lowerQuery.includes('all') || lowerQuery.includes('six') || lowerQuery.includes('6')) {
+      const sorted = [...resumeDatabase].sort((a, b) => 
+        (b.yearsOfExperience || 0) - (a.yearsOfExperience || 0)
+      );
+      
+      const summary = sorted.map((c, idx) => 
+        `${idx + 1}. ${c.name}: ${c.yearsOfExperience} years experience, ${c.skills.length} skills`
+      ).join('. ');
+      
+      const topCandidate = sorted[0];
+      const avgExp = (sorted.reduce((sum, c) => sum + (c.yearsOfExperience || 0), 0) / sorted.length).toFixed(1);
+      
+      return `Here's a comparison of all ${sorted.length} candidates: ${summary}. Average experience is ${avgExp} years. ${topCandidate.name} has the most experience with ${topCandidate.yearsOfExperience} years. Would you like detailed comparison of any two?`;
+    }
+    
     // Check for "top 2" or "top candidates" pattern
     if (lowerQuery.includes('top') && resumeDatabase.length >= 2) {
       // Sort by experience and take top 2
@@ -145,9 +176,19 @@ async function handleQueryLocally(query, resumeDatabase) {
       lowerQuery.includes('skill') || lowerQuery.includes('know') || lowerQuery.includes('find'))) {
     const matches = findCandidatesBySkills(resumeDatabase, requestedSkills);
     if (matches.length > 0) {
+      // Store context for follow-up "yes" response
+      lastQueryContext = {
+        type: 'skill_search',
+        candidates: matches.slice(0, 2)
+      };
+      
       const topMatches = matches.slice(0, 2).map(r => 
         `${r.name} with ${r.yearsOfExperience} years`
       ).join(' and ');
+      
+      console.log(`Skill search found: ${matches.map(m => m.name).join(', ')}`);
+      console.log(`Stored context for comparison: ${lastQueryContext.candidates[0].name} vs ${lastQueryContext.candidates[1].name}`);
+      
       return `Found ${matches.length} with ${requestedSkills.join(' and ')}: ${topMatches}. Want to compare them?`;
     } else {
       return `No exact matches for ${requestedSkills.join(' and ')}. Try different skills?`;

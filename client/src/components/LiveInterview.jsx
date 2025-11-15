@@ -85,27 +85,39 @@ function LiveInterview() {
 
   const startVideoCall = async () => {
     try {
+      console.log('Starting video call...');
       const response = await axios.post('/api/agora/token', {
         channelName: 'interview-room',
         uid: 0
       })
 
       const { token, appId } = response.data
+      console.log('Got Agora token, joining channel...');
       await client.join(appId, 'interview-room', token, null)
       
-      const videoTrack = await AgoraRTC.createCameraVideoTrack()
+      console.log('Creating video and audio tracks...');
+      const videoTrack = await AgoraRTC.createCameraVideoTrack({
+        encoderConfig: '480p_1'
+      })
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
       
+      console.log('Publishing tracks...');
       await client.publish([videoTrack, audioTrack])
       
       setLocalVideoTrack(videoTrack)
       setLocalAudioTrack(audioTrack)
       
+      // Play video in the container
       if (videoRef.current) {
-        videoTrack.play(videoRef.current)
+        console.log('Playing video in container...');
+        videoTrack.play(videoRef.current, { fit: 'cover' })
+        console.log('Video should now be visible');
+      } else {
+        console.error('Video ref is null!');
       }
     } catch (error) {
-      console.error('Video call error:', error)
+      console.error('Video call error:', error);
+      alert('Failed to start video: ' + error.message);
     }
   }
 

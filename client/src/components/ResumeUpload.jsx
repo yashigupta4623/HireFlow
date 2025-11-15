@@ -398,10 +398,6 @@ function ResumeUpload({ onUploadSuccess }) {
                     <span className="info-value">{selectedCandidate.yearsOfExperience || 0} years</span>
                   </div>
                   <div className="info-item">
-                    <span className="info-label">Education:</span>
-                    <span className="info-value">{selectedCandidate.education || 'Not specified'}</span>
-                  </div>
-                  <div className="info-item">
                     <span className="info-label">Total Skills:</span>
                     <span className="info-value">{selectedCandidate.skills?.length || 0} skills</span>
                   </div>
@@ -543,7 +539,7 @@ function ResumeUpload({ onUploadSuccess }) {
             
             <div className="confirm-details">
               <p><strong>To:</strong> {selectedCandidate.email || <span className="no-email-text">No email available</span>}</p>
-              <p><strong>Subject:</strong> Exciting Job Opportunity - {selectedCandidate.fitScore}% Match</p>
+              <p><strong>Subject:</strong> Exciting Job Opportunity</p>
             </div>
             <div className="confirm-actions">
               <button 

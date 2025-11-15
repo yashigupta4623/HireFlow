@@ -1208,14 +1208,12 @@ app.post('/api/send-candidate-email', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Candidate email is required' });
     }
 
-    const subject = `Exciting Job Opportunity - ${fitScore}% Match`;
+    const subject = `Exciting Job Opportunity`;
     
     const body = `
 Dear ${candidateName},
 
 We came across your profile and believe you would be an excellent fit for an exciting opportunity we're currently recruiting for.
-
-Based on our initial assessment, your profile shows a ${fitScore}% match with the role requirements!
 
 JOB DESCRIPTION:
 ${jobDescription}
