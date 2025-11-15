@@ -54,52 +54,95 @@ function ChatInterface({ resumeCount }) {
   ]
 
   return (
-    <div className="chat-container">
-      <h2>Chat with Resume Database</h2>
+    <div className="chat-container-modern">
+      <div className="chat-header">
+        <div className="chat-header-content">
+          <div className="chat-icon">💬</div>
+          <div>
+            <h2>AI Chat Assistant</h2>
+            <p className="chat-subtitle">Ask anything about your {resumeCount} candidates</p>
+          </div>
+        </div>
+        {resumeCount > 0 && (
+          <div className="resume-count-badge">
+            {resumeCount} resumes loaded
+          </div>
+        )}
+      </div>
       
       {resumeCount === 0 && (
-        <div className="warning">
-          ⚠️ No resumes uploaded yet. Upload some resumes first!
+        <div className="warning-modern">
+          <span className="warning-icon">⚠️</span>
+          <div>
+            <strong>No resumes uploaded yet</strong>
+            <p>Upload some resumes first to start chatting!</p>
+          </div>
         </div>
       )}
 
-      <div className="example-queries">
-        <p>Try asking:</p>
-        {exampleQueries.map((query, idx) => (
-          <button 
-            key={idx} 
-            onClick={() => setInput(query)}
-            className="example-btn"
-          >
-            {query}
-          </button>
-        ))}
-      </div>
+      {messages.length === 0 && resumeCount > 0 && (
+        <div className="example-queries-modern">
+          <p className="example-title">💡 Try asking:</p>
+          <div className="example-grid">
+            {exampleQueries.map((query, idx) => (
+              <button 
+                key={idx} 
+                onClick={() => setInput(query)}
+                className="example-btn-modern"
+              >
+                <span className="example-icon">✨</span>
+                {query}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <div className="messages">
+      <div className="messages-modern">
         {messages.map((msg, idx) => (
-          <div key={idx} className={`message ${msg.role}`}>
-            <strong>{msg.role === 'user' ? 'You' : 'AI'}:</strong>
-            <p>{msg.content}</p>
+          <div key={idx} className={`message-modern ${msg.role}`}>
+            <div className="message-avatar">
+              {msg.role === 'user' ? '👤' : '🤖'}
+            </div>
+            <div className="message-content">
+              <div className="message-header">
+                <strong>{msg.role === 'user' ? 'You' : 'AI Assistant'}</strong>
+                <span className="message-time">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+              </div>
+              <p>{msg.content}</p>
+            </div>
           </div>
         ))}
-        {loading && <div className="message assistant loading">Thinking...</div>}
+        {loading && (
+          <div className="message-modern assistant">
+            <div className="message-avatar">🤖</div>
+            <div className="message-content">
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="input-area">
+      <div className="input-area-modern">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Ask about candidates..."
+          placeholder="Ask about candidates, skills, experience..."
           disabled={loading || resumeCount === 0}
+          rows="1"
         />
         <button 
           onClick={handleSend} 
           disabled={loading || !input.trim() || resumeCount === 0}
+          className="send-btn-modern"
         >
-          Send
+          {loading ? '⏳' : '📤'} Send
         </button>
       </div>
     </div>
