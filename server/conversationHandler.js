@@ -26,7 +26,7 @@ Candidates:
 ${context}
 
 Rules:
-- Keep answers under 40 words
+- Keep answer under 40 words
 - Be direct and specific
 - If no match, say "No" clearly
 - Use candidate names and actual data
